@@ -1,0 +1,74 @@
+import { BoqService } from './boq.service';
+export declare class BoqController {
+    private readonly boqService;
+    constructor(boqService: BoqService);
+    createSingleItem(projectId: string, createDto: any): Promise<{
+        id: string;
+        projectId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        description: string;
+        totalValue: number;
+        unitPrice: number;
+        quantity: number;
+        unit: string;
+        itemCode: string;
+        estimatedUnitCost: number;
+        executionType: string;
+        subcontractorPrice: number | null;
+        estimatedTotalCost: number;
+        executedQty: number;
+    }>;
+    createBatch(projectId: string, items: any[]): Promise<any>;
+    findAllByProject(projectId: string): Promise<{
+        id: string;
+        projectId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        description: string;
+        totalValue: number;
+        unitPrice: number;
+        quantity: number;
+        unit: string;
+        itemCode: string;
+        estimatedUnitCost: number;
+        executionType: string;
+        subcontractorPrice: number | null;
+        estimatedTotalCost: number;
+        executedQty: number;
+    }[]>;
+    updateItem(id: string, updateDto: any): Promise<{
+        id: string;
+        projectId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        description: string;
+        totalValue: number;
+        unitPrice: number;
+        quantity: number;
+        unit: string;
+        itemCode: string;
+        estimatedUnitCost: number;
+        executionType: string;
+        subcontractorPrice: number | null;
+        estimatedTotalCost: number;
+        executedQty: number;
+    }>;
+    deleteItem(id: string): Promise<{
+        id: string;
+        projectId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        description: string;
+        totalValue: number;
+        unitPrice: number;
+        quantity: number;
+        unit: string;
+        itemCode: string;
+        estimatedUnitCost: number;
+        executionType: string;
+        subcontractorPrice: number | null;
+        estimatedTotalCost: number;
+        executedQty: number;
+    }>;
+}
