@@ -4,13 +4,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS - in production allow only the frontend URL
-  const allowedOrigins = process.env.FRONTEND_URL
-    ? [process.env.FRONTEND_URL]
-    : true; // Allow all in development
-
   app.enableCors({
-    origin: allowedOrigins,
+    origin: true, // Allow all origins for now to avoid Vercel alias blocking
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
