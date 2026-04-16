@@ -101,7 +101,7 @@ export class DaftraService {
     }
 
     try {
-      const response = await fetch(`${baseUrl}/entity/client/list/1?limit=1`, {
+      const response = await fetch(`${baseUrl}/entity/client/list?limit=1`, {
         headers: { 
           'APIKEY': apiKey, 
           'Content-Type': 'application/json',
