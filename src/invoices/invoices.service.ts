@@ -17,7 +17,7 @@ export class InvoicesService {
 
       const contract = await tx.contract.findUnique({
         where: { id: contractId },
-        include: { project: true }
+        include: { project: true, items: true }
       });
       if (!contract) throw new BadRequestException('Contract not found');
 
@@ -31,15 +31,26 @@ export class InvoicesService {
 
         if (!boqItem) throw new BadRequestException(`BOQ Item ${item.boqItemId} not found`);
 
-        const previousQty = boqItem.executedQty;
+        let invoiceUnitPrice = boqItem.unitPrice;
+        let invoiceMaxQuantity = boqItem.quantity;
+
+        // If it's a subcontract, use the exact assigned prices and quantities!
+        if (contract.type === 'SUBCONTRACT' && contract.items && contract.items.length > 0) {
+           const cItem = contract.items.find(ci => ci.boqItemId === boqItem.id);
+           if (!cItem) throw new BadRequestException(`BOQ Item ${item.boqItemId} is not assigned to this contract`);
+           invoiceUnitPrice = cItem.unitPrice;
+           invoiceMaxQuantity = cItem.assignedQty; // Subcontractor cannot exceed their assigned qty
+        }
+
+        const previousQty = boqItem.executedQty; // Total executed so far globally (for now)
         const currentQty = parseFloat(item.currentQty);
         const totalQty = previousQty + currentQty;
 
-        if (totalQty > boqItem.quantity) {
+        if (totalQty > invoiceMaxQuantity) {
           throw new BadRequestException(`Executed quantity exceeds planned for BOQ item ${boqItem.itemCode || boqItem.description}`);
         }
 
-        const currentValue = currentQty * boqItem.unitPrice;
+        const currentValue = currentQty * invoiceUnitPrice;
         grossAmount += currentValue;
 
         detailsToCreate.push({
@@ -47,7 +58,7 @@ export class InvoicesService {
           previousQty,
           currentQty,
           totalQty,
-          unitPrice: boqItem.unitPrice,
+          unitPrice: invoiceUnitPrice,
           currentValue
         });
 
@@ -172,7 +183,7 @@ export class InvoicesService {
     return this.prisma.$transaction(async (tx) => {
       const existingInvoice = await tx.invoice.findUnique({
         where: { id },
-        include: { details: true, contract: true }
+        include: { details: true, contract: { include: { items: true } } }
       });
 
       if (!existingInvoice) throw new BadRequestException('Invoice not found');
@@ -206,15 +217,26 @@ export class InvoicesService {
         });
         if (!boqItem) throw new BadRequestException(`BOQ Item ${item.boqItemId} not found`);
 
+        let invoiceUnitPrice = boqItem.unitPrice;
+        let invoiceMaxQuantity = boqItem.quantity;
+
+        // If it's a subcontract, use the exact assigned prices and quantities!
+        if (contract.type === 'SUBCONTRACT' && contract.items && contract.items.length > 0) {
+           const cItem = contract.items.find(ci => ci.boqItemId === boqItem.id);
+           if (!cItem) throw new BadRequestException(`BOQ Item ${item.boqItemId} is not assigned to this contract`);
+           invoiceUnitPrice = cItem.unitPrice;
+           invoiceMaxQuantity = cItem.assignedQty;
+        }
+
         const previousQty = boqItem.executedQty; // after reversion
         const currentQty = parseFloat(item.currentQty);
         const totalQty = previousQty + currentQty;
 
-        if (totalQty > boqItem.quantity) {
+        if (totalQty > invoiceMaxQuantity) {
           throw new BadRequestException(`Executed quantity exceeds planned for BOQ item ${boqItem.itemCode || boqItem.description}`);
         }
 
-        const currentValue = currentQty * boqItem.unitPrice;
+        const currentValue = currentQty * invoiceUnitPrice;
         grossAmount += currentValue;
 
         detailsToCreate.push({
@@ -222,7 +244,7 @@ export class InvoicesService {
           previousQty,
           currentQty,
           totalQty,
-          unitPrice: boqItem.unitPrice,
+          unitPrice: invoiceUnitPrice,
           currentValue
         });
 
