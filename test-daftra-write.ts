@@ -1,10 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
 
 const prisma = new PrismaClient();
 
 async function test() {
   const settings = await prisma.systemSetting.findMany();
-  let domain = 'example';
+  let domain = 'gkke';
   let apiKey = '';
   for (const s of settings) {
     if (s.key === 'DAFTRA_DOMAIN') domain = s.value;
@@ -21,16 +22,8 @@ async function test() {
       headers: { APIKEY: apiKey, Accept: 'application/json' },
     });
     const data1 = await res1.json();
-    console.log("=== PURCHASE_INVOICES/300 ===");
-    console.log(JSON.stringify(data1, null, 2).substring(0, 500) + '...');
-
-    const res2 = await fetch(`https://${domain}.daftra.com/api2/purchase_orders/300`, {
-      headers: { APIKEY: apiKey, Accept: 'application/json' },
-    });
-    const data2 = await res2.json();
-    console.log("=== PURCHASE_ORDERS/300 ===");
-    console.log(JSON.stringify(data2, null, 2).substring(0, 500) + '...');
-
+    fs.writeFileSync('daftra-keys.txt', JSON.stringify(data1, null, 2));
+    console.log("SUCCESS! Wrote response to daftra-keys.txt");
   } catch (err: any) {
     console.error(err.message);
   }

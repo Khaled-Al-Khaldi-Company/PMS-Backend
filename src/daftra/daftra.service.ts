@@ -551,13 +551,13 @@ export class DaftraService {
       let payStatus = "UNPAID";
       let paidAmt = 0;
       
-      const totalAmount = Number(daftraDoc.total || daftraDoc.total_amount || invoice.netAmount);
-      const dueAmount = Number(daftraDoc.due_amount ?? daftraDoc.unpaid ?? totalAmount);
+      const totalAmount = Number(daftraDoc.summary_total ?? daftraDoc.total ?? daftraDoc.total_amount ?? invoice.netAmount);
+      const dueAmount = Number(daftraDoc.summary_unpaid ?? daftraDoc.due_amount ?? daftraDoc.unpaid ?? totalAmount);
 
       // Check explicit payment_status if due amount isn't reliable
-      const daftraStatus = daftraDoc.payment_status || daftraDoc.status; // status=3 in some APIs means Paid
+      const daftraStatus = daftraDoc.payment_status || daftraDoc.status; // status=3 or 2 in some APIs means Paid
 
-      if (daftraStatus === 3 || daftraStatus === "Paid" || daftraStatus === "مدفوع") {
+      if (daftraStatus === 3 || daftraStatus === 2 || daftraStatus === "Paid" || daftraStatus === "مدفوع") {
          payStatus = "PAID";
          paidAmt = totalAmount;
       } else if (totalAmount > 0) {
