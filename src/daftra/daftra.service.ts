@@ -528,8 +528,8 @@ export class DaftraService {
     const { apiKey, domain } = await this.getDaftraConfig();
     const isMainContract = invoice.contract.type === 'MAIN_CONTRACT';
     
-    // Main contracts use invoices, subcontracts were pushed as purchase_orders
-    const endpoint = isMainContract ? 'invoices' : 'purchase_orders';
+    // Main contracts use invoices, subcontracts use purchase_invoices
+    const endpoint = isMainContract ? 'invoices' : 'purchase_invoices';
     
     try {
       const response = await fetch(`https://${domain}.daftra.com/api2/${endpoint}/${invoice.daftraInvoiceId}`, {
@@ -545,16 +545,22 @@ export class DaftraService {
       }
 
       const resData = await response.json();
-      const nodeName = isMainContract ? 'Invoice' : 'PurchaseOrder';
-      const daftraDoc = resData.data?.[nodeName] || resData[nodeName] || resData.data || {};
+      const nodeName = isMainContract ? 'Invoice' : 'PurchaseInvoice';
+      const daftraDoc = resData.data?.[nodeName] || resData[nodeName] || resData.data?.PurchaseOrder || resData.data || {};
 
       let payStatus = "UNPAID";
       let paidAmt = 0;
       
       const totalAmount = Number(daftraDoc.total || daftraDoc.total_amount || invoice.netAmount);
-      const dueAmount = isMainContract ? Number(daftraDoc.due_amount ?? totalAmount) : Number(daftraDoc.unpaid ?? totalAmount);
+      const dueAmount = Number(daftraDoc.due_amount ?? daftraDoc.unpaid ?? totalAmount);
 
-      if (totalAmount > 0) {
+      // Check explicit payment_status if due amount isn't reliable
+      const daftraStatus = daftraDoc.payment_status || daftraDoc.status; // status=3 in some APIs means Paid
+
+      if (daftraStatus === 3 || daftraStatus === "Paid" || daftraStatus === "مدفوع") {
+         payStatus = "PAID";
+         paidAmt = totalAmount;
+      } else if (totalAmount > 0) {
         if (dueAmount <= 0) {
           payStatus = "PAID";
           paidAmt = totalAmount;
@@ -562,13 +568,6 @@ export class DaftraService {
           payStatus = "PARTIAL";
           paidAmt = totalAmount - dueAmount;
         }
-      }
-
-      // Special check for PO converted to Invoice in Daftra UI
-      if (!isMainContract && (daftraDoc.status === 5 || daftraDoc.status === 'Billed')) {
-         // It was billed, but we don't have the exact payment of the child invoice.
-         // We can gracefully state it's billed/tracked in PO
-         // For now, let's keep the mathematical check as fallback.
       }
 
       await this.prisma.invoice.update({
