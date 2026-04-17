@@ -575,7 +575,7 @@ export class DaftraService {
         data: { paymentStatus: payStatus, paidAmount: paidAmt }
       });
 
-      return { paymentStatus: payStatus, paidAmount: paidAmt };
+      return { paymentStatus: payStatus, paidAmount: paidAmt, daftraRaw: resData };
     } catch (err: any) {
       throw new BadRequestException(`فشل استرداد حالة السداد من دفترة: ${err.message}`);
     }
