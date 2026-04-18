@@ -314,6 +314,8 @@ export class DaftraService {
         PurchaseInvoice: {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
+          supplier_business_name: supplier.name,
+          supplier_email: supplierEmail,
           date: new Date().toISOString().split('T')[0],
           draft: 1,
           status: 4, 
