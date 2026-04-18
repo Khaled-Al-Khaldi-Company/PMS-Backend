@@ -306,16 +306,23 @@ export class DaftraService {
         throw new BadRequestException(`لا يمكن ترحيل المستخلص. المقاول/المورد "${supplier?.name || ''}" غير مربوط بدفترة.`);
       }
 
+      const supplierEmail = (supplier.email && /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(supplier.email)) 
+        ? supplier.email 
+        : `vendor${supplier.daftraSupplierId}@example.com`;
+
       daftraPayload = {
         PurchaseOrder: {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
-          supplier_business_name: supplier.name,
-          supplier_email: (supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplier.email)) ? supplier.email : `vendor${supplier.daftraSupplierId}@example.com`,
           date: new Date().toISOString().split('T')[0],
-          draft: 1, // Daftra tag for setting document as Draft
+          draft: 1,
           status: 4, 
           notes: `مستخلص مورد/مقاول باطن رقم: ${invoice.invoiceNumber} | مشروع: ${invoice.contract.project?.name}${invoice.deferDeductions ? ' | الاستقطاعات مؤجلة للمستخلص القادم' : ''}`,
+        },
+        Supplier: {
+          id: Number(supplier.daftraSupplierId),
+          email: supplierEmail,
+          business_name: supplier.name,
         },
         PurchaseOrderItem: items,
       };
