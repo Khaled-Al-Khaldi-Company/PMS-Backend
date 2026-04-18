@@ -311,20 +311,15 @@ export class DaftraService {
         : `vendor${supplier.daftraSupplierId}@example.com`;
 
       daftraPayload = {
-        PurchaseOrder: {
+        PurchaseInvoice: {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
-          supplier_email: "vendor@example.com",
           date: new Date().toISOString().split('T')[0],
           draft: 1,
           status: 4, 
           notes: `مستخلص مورد/مقاول باطن رقم: ${invoice.invoiceNumber} | مشروع: ${invoice.contract.project?.name}${invoice.deferDeductions ? ' | الاستقطاعات مؤجلة للمستخلص القادم' : ''}`,
         },
-        Supplier: {
-          id: Number(supplier.daftraSupplierId),
-          email: "vendor@example.com",
-        },
-        PurchaseOrderItem: items,
+        PurchaseInvoiceItem: items,
       };
 
       if (invoice.contract.project?.daftraCostCenterId) {
