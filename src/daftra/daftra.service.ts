@@ -314,6 +314,7 @@ export class DaftraService {
         PurchaseOrder: {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
+          supplier_email: "vendor@example.com",
           date: new Date().toISOString().split('T')[0],
           draft: 1,
           status: 4, 
@@ -321,8 +322,7 @@ export class DaftraService {
         },
         Supplier: {
           id: Number(supplier.daftraSupplierId),
-          email: supplierEmail,
-          business_name: supplier.name,
+          email: "vendor@example.com",
         },
         PurchaseOrderItem: items,
       };
