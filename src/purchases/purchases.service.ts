@@ -66,16 +66,21 @@ export class PurchasesService {
 
   async approveStatus(id: string) {
     // 1. Try to push to Daftra
+    let daftraId: string | undefined;
     try {
-      await this.daftraService.pushPurchaseOrder(id);
+      const result = await this.daftraService.pushPurchaseOrder(id);
+      daftraId = result?.daftraId;
     } catch (err: any) {
       throw new BadRequestException(`لا يمكن اعتماد طلب الشراء بسبب فشل المزامنة مع دفترة: ${err.message}`);
     }
 
-    // 2. Local approval
+    // 2. Local approval + save Daftra ID
     return this.prisma.purchaseOrder.update({
       where: { id },
-      data: { status: 'APPROVED' }
+      data: { 
+        status: 'APPROVED',
+        ...(daftraId ? { daftraId } : {})
+      }
     });
   }
 

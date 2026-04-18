@@ -311,7 +311,7 @@ export class DaftraService {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
           supplier_business_name: supplier.name,
-          supplier_email: supplier.email || "vendor@pms.system",
+          supplier_email: (supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplier.email)) ? supplier.email : `supplier-${supplier.daftraSupplierId}@pms.local`,
           date: new Date().toISOString().split('T')[0],
           draft: 1, // Daftra tag for setting document as Draft
           status: 4, 
@@ -418,14 +418,14 @@ export class DaftraService {
       },
       Supplier: {
         id: Number(po.supplier.daftraSupplierId),
-        email: "test.vendor.pms@daftra.com" // hardcoded perfectly valid email to bypass any whitespace issues
+        email: (po.supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)) ? po.supplier.email : `supplier-${po.supplier.daftraSupplierId}@pms.local`
       },
       PurchaseOrderItem: po.items.map((item, index) => ({
         item: item.material.name || `مادة ${index + 1}`, // 'item' is required by Daftra V1 API
         description: item.material.name || "",
         quantity: typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1,
         unit_price: typeof item.unitPrice === 'number' && item.unitPrice >= 0 ? item.unitPrice : 0,
-        tax1: po.taxAmount > 0 ? 15 : 0
+        tax1: po.taxAmount > 0 ? 1 : 0
       }))
     };
 
