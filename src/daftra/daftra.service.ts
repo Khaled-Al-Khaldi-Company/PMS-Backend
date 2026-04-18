@@ -311,7 +311,7 @@ export class DaftraService {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
           supplier_business_name: supplier.name,
-          supplier_email: (supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplier.email)) ? supplier.email : `supplier-${supplier.daftraSupplierId}@pms.local`,
+          supplier_email: (supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplier.email)) ? supplier.email : `vendor${supplier.daftraSupplierId}@example.com`,
           date: new Date().toISOString().split('T')[0],
           draft: 1, // Daftra tag for setting document as Draft
           status: 4, 
@@ -418,7 +418,7 @@ export class DaftraService {
       },
       Supplier: {
         id: Number(po.supplier.daftraSupplierId),
-        email: (po.supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)) ? po.supplier.email : `supplier-${po.supplier.daftraSupplierId}@pms.local`
+        email: (po.supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)) ? po.supplier.email : `vendor${po.supplier.daftraSupplierId}@example.com`
       },
       PurchaseOrderItem: po.items.map((item, index) => ({
         item: item.material.name || `مادة ${index + 1}`, // 'item' is required by Daftra V1 API
