@@ -311,7 +311,7 @@ export class DaftraService {
         : `vendor${supplier.daftraSupplierId}@example.com`;
 
       daftraPayload = {
-        PurchaseInvoice: {
+        PurchaseOrder: {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
           supplier_business_name: supplier.name,
@@ -321,7 +321,7 @@ export class DaftraService {
           status: 4, 
           notes: `مستخلص مورد/مقاول باطن رقم: ${invoice.invoiceNumber} | مشروع: ${invoice.contract.project?.name}${invoice.deferDeductions ? ' | الاستقطاعات مؤجلة للمستخلص القادم' : ''}`,
         },
-        PurchaseInvoiceItem: items,
+        PurchaseOrderItem: items,
       };
 
       if (invoice.contract.project?.daftraCostCenterId) {
