@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
+// v2.1 - supplier_email removed from PurchaseOrder payload
 
 @Injectable()
 export class DaftraService {
