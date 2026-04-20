@@ -49,6 +49,31 @@ export class InventoryService {
   async recordReceipt(data: any) {
     const { warehouseId, materialId, quantity, poId, remarks, createdBy } = data;
     
+    // ✅ التحقق من عدم تجاوز كمية أمر الشراء
+    if (poId) {
+      const poItem = await this.prisma.purchaseOrderItem.findFirst({
+        where: { purchaseOrderId: poId, materialId }
+      });
+
+      if (!poItem) {
+        throw new BadRequestException('هذه المادة غير موجودة في أمر الشراء المحدد.');
+      }
+
+      // حساب الكمية المستلمة مسبقاً لنفس المادة على نفس الـ PO
+      const alreadyReceived = await this.prisma.materialTransaction.aggregate({
+        where: { poId, materialId, type: 'RECEIPT' },
+        _sum: { quantity: true }
+      });
+      const receivedSoFar = Number(alreadyReceived._sum.quantity ?? 0);
+      const remainingQty = poItem.quantity - receivedSoFar;
+
+      if (quantity > remainingQty) {
+        throw new BadRequestException(
+          `لا يمكن استلام ${quantity} وحدة. الكمية المطلوبة في الـ PO: ${poItem.quantity}، المستلم مسبقاً: ${receivedSoFar}، المتبقي: ${remainingQty}.`
+        );
+      }
+    }
+
     // 1. Generate Ref Number
     const count = await this.prisma.materialTransaction.count({ where: { type: 'RECEIPT' } });
     const referenceNo = `GRN-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
