@@ -51,9 +51,17 @@ export class InventoryService {
     
     // ✅ التحقق من عدم تجاوز كمية أمر الشراء
     if (poId) {
-      const poItem = await this.prisma.purchaseOrderItem.findFirst({
-        where: { purchaseOrderId: poId, materialId }
+      const po = await this.prisma.purchaseOrder.findUnique({
+        where: { id: poId },
+        include: { items: true }
       });
+
+      if (!po) throw new BadRequestException('أمر الشراء غير موجود.');
+      if (po.status === 'COMPLETED') {
+        throw new BadRequestException('أمر الشراء هذا مكتمل ومستلم بالكامل مسبقاً، لا يمكن الاستلام عليه مرة أخرى.');
+      }
+
+      const poItem = po.items.find(item => item.materialId === materialId);
 
       if (!poItem) {
         throw new BadRequestException('هذه المادة غير موجودة في أمر الشراء المحدد.');
@@ -87,7 +95,7 @@ export class InventoryService {
           type: 'RECEIPT',
           warehouseId,
           materialId,
-          quantity: Math.abs(quantity), // Ensure positive
+          quantity: Math.abs(quantity),
           poId,
           remarks,
           createdBy
@@ -100,6 +108,32 @@ export class InventoryService {
         update: { quantity: { increment: Math.abs(quantity) } },
         create: { warehouseId, materialId, quantity: Math.abs(quantity) }
       });
+
+      // 3. ✅ Check if the entire PO is now COMPLETED
+      if (poId) {
+        const poItems = await tx.purchaseOrderItem.findMany({ where: { purchaseOrderId: poId } });
+        let allCompleted = true;
+
+        for (const item of poItems) {
+          const itemReceived = await tx.materialTransaction.aggregate({
+            where: { poId, materialId: item.materialId, type: 'RECEIPT' },
+            _sum: { quantity: true }
+          });
+          const totalReceivedForItem = Number(itemReceived._sum.quantity ?? 0);
+          
+          if (totalReceivedForItem < item.quantity) {
+            allCompleted = false;
+            break;
+          }
+        }
+
+        if (allCompleted) {
+          await tx.purchaseOrder.update({
+            where: { id: poId },
+            data: { status: 'COMPLETED' }
+          });
+        }
+      }
 
       return trx;
     });
