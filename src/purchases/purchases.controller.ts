@@ -17,6 +17,16 @@ export class PurchasesController {
     return this.purchasesService.findAll();
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.purchasesService.findOne(id);
+  }
+
+  @Patch(':id/sync-daftra')
+  syncStatusFromDaftra(@Param('id') id: string) {
+    return this.purchasesService.syncStatusFromDaftra(id);
+  }
+
   @Patch(':id/approve')
   approveStatus(@Param('id') id: string) {
     return this.purchasesService.approveStatus(id);

@@ -592,4 +592,39 @@ export class DaftraService {
       throw new BadRequestException(`فشل استرداد حالة السداد من دفترة: ${err.message}`);
     }
   }
+
+  /**
+   * Sync Purchase Order status from Daftra - auto-reverts to PENDING if deleted (404)
+   */
+  async syncPurchaseOrderStatus(poId: string, daftraId: string) {
+    const { apiKey, domain } = await this.getDaftraConfig();
+
+    try {
+      const response = await fetch(`https://${domain}.daftra.com/api2/purchase_orders/${daftraId}`, {
+        method: 'GET',
+        headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // إعادة أمر الشراء لحالة المسودة إذا تم حذفه من دفترة
+          await this.prisma.purchaseOrder.update({
+            where: { id: poId },
+            data: { status: 'PENDING', daftraId: null }
+          });
+          throw new BadRequestException(
+            'تنبيه: لم يتم العثور على أمر الشراء في دفترة (قد يكون محذوفاً). ' +
+            'تم إعادته تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.'
+          );
+        }
+        throw new Error(`فشل الاتصال بدفترة: ${response.status}`);
+      }
+
+      const resData = await response.json();
+      const poData = resData.data?.PurchaseOrder || resData.PurchaseOrder || resData.data || {};
+      return { status: 'synced', daftraData: poData };
+    } catch (err: any) {
+      throw new BadRequestException(`فشل مزامنة أمر الشراء من دفترة: ${err.message}`);
+    }
+  }
 }

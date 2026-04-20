@@ -64,6 +64,32 @@ export class PurchasesService {
     });
   }
 
+  async findOne(id: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: {
+        project: true,
+        supplier: true,
+        items: { include: { material: true } }
+      }
+    });
+    if (!po) throw new NotFoundException('طلب الشراء غير موجود');
+    return po;
+  }
+
+  async syncStatusFromDaftra(id: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+    if (!po) throw new NotFoundException('طلب الشراء غير موجود');
+    if (!po.daftraId) throw new BadRequestException('طلب الشراء غير مربوط بدفترة!');
+
+    try {
+      const result = await this.daftraService.syncPurchaseOrderStatus(id, po.daftraId);
+      return result;
+    } catch (err: any) {
+      throw new BadRequestException(err.message);
+    }
+  }
+
   async approveStatus(id: string) {
     // 1. Try to push to Daftra
     let daftraId: string | undefined;
