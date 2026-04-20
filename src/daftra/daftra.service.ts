@@ -538,7 +538,20 @@ export class DaftraService {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new BadRequestException('لم يتم العثور على هذا المستند في دفترة. قد يكون قد تم حذفه أو أن رقم التزامن غير صحيح.');
+          // ✅ الميزة الجديدة: إذا تم حذف المستند من دفترة، أعد المستخلص لحالة المسودة
+          await this.prisma.invoice.update({
+            where: { id: invoiceId },
+            data: {
+              status: 'DRAFT',
+              daftraInvoiceId: null,
+              paymentStatus: 'UNPAID',
+              paidAmount: 0,
+            }
+          });
+          throw new BadRequestException(
+            'تنبيه: لم يتم العثور على المستند في دفترة (قد يكون محذوفاً). ' +
+            'تم إعادة المستخلص تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.'
+          );
         }
         throw new Error(`فشل الاتصال: ${response.status}`);
       }
