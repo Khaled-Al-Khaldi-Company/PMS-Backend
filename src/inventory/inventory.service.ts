@@ -9,8 +9,15 @@ export class InventoryService {
   // =====================
   // WAREHOUSES
   // =====================
-  async createWarehouse(data: Prisma.WarehouseUncheckedCreateInput) {
-    return this.prisma.warehouse.create({ data });
+  async createWarehouse(data: any) {
+    const { name, location, projectId } = data;
+    return this.prisma.warehouse.create({
+      data: {
+        name,
+        location: location || null,
+        ...(projectId && projectId !== '' ? { projectId } : {})
+      }
+    });
   }
 
   async findAllWarehouses() {
