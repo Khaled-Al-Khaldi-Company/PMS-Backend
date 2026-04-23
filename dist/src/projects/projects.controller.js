@@ -37,6 +37,9 @@ let ProjectsController = class ProjectsController {
     findAll() {
         return this.projectsService.findAll();
     }
+    getGlobalDashboard() {
+        return this.projectsService.getGlobalDashboard();
+    }
     findOne(id) {
         return this.projectsService.findOne(id);
     }
@@ -65,6 +68,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ProjectsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('dashboard/global'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ProjectsController.prototype, "getGlobalDashboard", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

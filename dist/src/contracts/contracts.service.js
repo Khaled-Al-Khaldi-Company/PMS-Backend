@@ -32,6 +32,7 @@ let ContractsService = class ContractsService {
             include: {
                 subcontractor: true,
                 invoices: true,
+                items: true,
                 changeOrders: { include: { items: true } },
                 project: { include: { client: true } }
             }
@@ -75,6 +76,8 @@ let ContractsService = class ContractsService {
                     type,
                     amount,
                     status: status || 'APPROVED',
+                    createdBy: data.createdBy,
+                    approvedBy: status === 'APPROVED' ? data.createdBy : undefined,
                     contract: { connect: { id: contractId } },
                     items: {
                         create: items?.map((i) => ({

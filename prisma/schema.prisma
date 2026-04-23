@@ -590,4 +590,11 @@ model MaterialTransaction {
   createdBy     String?  // User acting
   createdAt     DateTime @default(now())
 }
-
+model QuotationTemplate {
+  id              String   @id @default(uuid())
+  name            String   @unique // e.g. "أعمال السباكة", "التشطيبات النهائية"
+  technicalOffer  String?  @db.Text
+  termsConditions String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

@@ -16,19 +16,28 @@ exports.PurchasesController = void 0;
 const common_1 = require("@nestjs/common");
 const purchases_service_1 = require("./purchases.service");
 const passport_1 = require("@nestjs/passport");
+const permissions_guard_1 = require("../auth/permissions.guard");
+const permissions_decorator_1 = require("../auth/permissions.decorator");
 let PurchasesController = class PurchasesController {
     purchasesService;
     constructor(purchasesService) {
         this.purchasesService = purchasesService;
     }
-    create(createPurchaseDto) {
+    create(createPurchaseDto, req) {
+        createPurchaseDto.createdBy = req.user.name;
         return this.purchasesService.create(createPurchaseDto);
     }
     findAll() {
         return this.purchasesService.findAll();
     }
-    approveStatus(id) {
-        return this.purchasesService.approveStatus(id);
+    findOne(id) {
+        return this.purchasesService.findOne(id);
+    }
+    syncStatusFromDaftra(id) {
+        return this.purchasesService.syncStatusFromDaftra(id);
+    }
+    approveStatus(id, req) {
+        return this.purchasesService.approveStatus(id, req.user.name);
     }
     remove(id) {
         return this.purchasesService.remove(id);
@@ -37,9 +46,11 @@ let PurchasesController = class PurchasesController {
 exports.PurchasesController = PurchasesController;
 __decorate([
     (0, common_1.Post)(),
+    (0, permissions_decorator_1.Permissions)('PO_CREATE'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], PurchasesController.prototype, "create", null);
 __decorate([
@@ -49,21 +60,39 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], PurchasesController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.Patch)(':id/approve'),
+    (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
+], PurchasesController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id/sync-daftra'),
+    (0, permissions_decorator_1.Permissions)('PO_APPROVE'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], PurchasesController.prototype, "syncStatusFromDaftra", null);
+__decorate([
+    (0, common_1.Patch)(':id/approve'),
+    (0, permissions_decorator_1.Permissions)('PO_APPROVE'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
 ], PurchasesController.prototype, "approveStatus", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, permissions_decorator_1.Permissions)('PO_CREATE'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], PurchasesController.prototype, "remove", null);
 exports.PurchasesController = PurchasesController = __decorate([
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), permissions_guard_1.PermissionsGuard),
     (0, common_1.Controller)('v1/purchases'),
     __metadata("design:paramtypes", [purchases_service_1.PurchasesService])
 ], PurchasesController);

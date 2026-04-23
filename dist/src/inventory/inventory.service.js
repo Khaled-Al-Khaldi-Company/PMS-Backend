@@ -18,7 +18,14 @@ let InventoryService = class InventoryService {
         this.prisma = prisma;
     }
     async createWarehouse(data) {
-        return this.prisma.warehouse.create({ data });
+        const { name, location, projectId } = data;
+        return this.prisma.warehouse.create({
+            data: {
+                name,
+                location: location || null,
+                ...(projectId && projectId !== '' ? { projectId } : {})
+            }
+        });
     }
     async findAllWarehouses() {
         return this.prisma.warehouse.findMany({
@@ -38,6 +45,30 @@ let InventoryService = class InventoryService {
     }
     async recordReceipt(data) {
         const { warehouseId, materialId, quantity, poId, remarks, createdBy } = data;
+        if (poId) {
+            const po = await this.prisma.purchaseOrder.findUnique({
+                where: { id: poId },
+                include: { items: true }
+            });
+            if (!po)
+                throw new common_1.BadRequestException('أمر الشراء غير موجود.');
+            if (po.status === 'COMPLETED') {
+                throw new common_1.BadRequestException('أمر الشراء هذا مكتمل ومستلم بالكامل مسبقاً، لا يمكن الاستلام عليه مرة أخرى.');
+            }
+            const poItem = po.items.find(item => item.materialId === materialId);
+            if (!poItem) {
+                throw new common_1.BadRequestException('هذه المادة غير موجودة في أمر الشراء المحدد.');
+            }
+            const alreadyReceived = await this.prisma.materialTransaction.aggregate({
+                where: { poId, materialId, type: 'RECEIPT' },
+                _sum: { quantity: true }
+            });
+            const receivedSoFar = Number(alreadyReceived._sum.quantity ?? 0);
+            const remainingQty = poItem.quantity - receivedSoFar;
+            if (quantity > remainingQty) {
+                throw new common_1.BadRequestException(`لا يمكن استلام ${quantity} وحدة. الكمية المطلوبة في الـ PO: ${poItem.quantity}، المستلم مسبقاً: ${receivedSoFar}، المتبقي: ${remainingQty}.`);
+            }
+        }
         const count = await this.prisma.materialTransaction.count({ where: { type: 'RECEIPT' } });
         const referenceNo = `GRN-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
         return this.prisma.$transaction(async (tx) => {
@@ -58,6 +89,27 @@ let InventoryService = class InventoryService {
                 update: { quantity: { increment: Math.abs(quantity) } },
                 create: { warehouseId, materialId, quantity: Math.abs(quantity) }
             });
+            if (poId) {
+                const poItems = await tx.purchaseOrderItem.findMany({ where: { purchaseOrderId: poId } });
+                let allCompleted = true;
+                for (const item of poItems) {
+                    const itemReceived = await tx.materialTransaction.aggregate({
+                        where: { poId, materialId: item.materialId, type: 'RECEIPT' },
+                        _sum: { quantity: true }
+                    });
+                    const totalReceivedForItem = Number(itemReceived._sum.quantity ?? 0);
+                    if (totalReceivedForItem < item.quantity) {
+                        allCompleted = false;
+                        break;
+                    }
+                }
+                if (allCompleted) {
+                    await tx.purchaseOrder.update({
+                        where: { id: poId },
+                        data: { status: 'COMPLETED' }
+                    });
+                }
+            }
             return trx;
         });
     }

@@ -1,14 +1,13 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 export declare class InventoryService {
     private prisma;
     constructor(prisma: PrismaService);
-    createWarehouse(data: Prisma.WarehouseUncheckedCreateInput): Promise<{
+    createWarehouse(data: any): Promise<{
         id: string;
-        projectId: string | null;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        projectId: string | null;
         isActive: boolean;
         location: string | null;
     }>;
@@ -20,10 +19,10 @@ export declare class InventoryService {
         } | null;
     } & {
         id: string;
-        projectId: string | null;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        projectId: string | null;
         isActive: boolean;
         location: string | null;
     })[]>;
@@ -49,6 +48,7 @@ export declare class InventoryService {
     recordReceipt(data: any): Promise<{
         id: string;
         createdAt: Date;
+        createdBy: string | null;
         date: Date;
         type: string;
         boqItemId: string | null;
@@ -56,13 +56,13 @@ export declare class InventoryService {
         quantity: number;
         referenceNo: string;
         remarks: string | null;
-        createdBy: string | null;
         warehouseId: string;
         poId: string | null;
     }>;
     recordIssue(data: any): Promise<{
         id: string;
         createdAt: Date;
+        createdBy: string | null;
         date: Date;
         type: string;
         boqItemId: string | null;
@@ -70,7 +70,6 @@ export declare class InventoryService {
         quantity: number;
         referenceNo: string;
         remarks: string | null;
-        createdBy: string | null;
         warehouseId: string;
         poId: string | null;
     }>;
@@ -92,6 +91,7 @@ export declare class InventoryService {
     } & {
         id: string;
         createdAt: Date;
+        createdBy: string | null;
         date: Date;
         type: string;
         boqItemId: string | null;
@@ -99,7 +99,6 @@ export declare class InventoryService {
         quantity: number;
         referenceNo: string;
         remarks: string | null;
-        createdBy: string | null;
         warehouseId: string;
         poId: string | null;
     })[]>;

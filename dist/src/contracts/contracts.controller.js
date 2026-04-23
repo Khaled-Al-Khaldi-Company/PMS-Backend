@@ -16,13 +16,16 @@ exports.ContractsController = void 0;
 const common_1 = require("@nestjs/common");
 const contracts_service_1 = require("./contracts.service");
 const passport_1 = require("@nestjs/passport");
+const permissions_guard_1 = require("../auth/permissions.guard");
+const permissions_decorator_1 = require("../auth/permissions.decorator");
 let ContractsController = class ContractsController {
     contractsService;
     constructor(contractsService) {
         this.contractsService = contractsService;
     }
-    create(createContractDto) {
+    create(createContractDto, req) {
         const { projectId, subcontractorId, subcontractorName, items, ...rest } = createContractDto;
+        rest.createdBy = req.user.name;
         const subcontractorConn = subcontractorId
             ? { connect: { id: subcontractorId } }
             : subcontractorName
@@ -54,16 +57,19 @@ let ContractsController = class ContractsController {
     remove(id) {
         return this.contractsService.remove(id);
     }
-    createChangeOrder(contractId, changeOrderDto) {
+    createChangeOrder(contractId, changeOrderDto, req) {
+        changeOrderDto.createdBy = req.user.name;
         return this.contractsService.createChangeOrder(contractId, changeOrderDto);
     }
 };
 exports.ContractsController = ContractsController;
 __decorate([
     (0, common_1.Post)(),
+    (0, permissions_decorator_1.Permissions)('CONTRACT_CREATE'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], ContractsController.prototype, "create", null);
 __decorate([
@@ -82,6 +88,7 @@ __decorate([
 ], ContractsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, permissions_decorator_1.Permissions)('CONTRACT_CREATE'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -90,6 +97,7 @@ __decorate([
 ], ContractsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, permissions_decorator_1.Permissions)('CONTRACT_APPROVE'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -97,14 +105,16 @@ __decorate([
 ], ContractsController.prototype, "remove", null);
 __decorate([
     (0, common_1.Post)(':id/change-orders'),
+    (0, permissions_decorator_1.Permissions)('CONTRACT_CREATE'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String, Object, Object]),
     __metadata("design:returntype", void 0)
 ], ContractsController.prototype, "createChangeOrder", null);
 exports.ContractsController = ContractsController = __decorate([
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), permissions_guard_1.PermissionsGuard),
     (0, common_1.Controller)('v1/contracts'),
     __metadata("design:paramtypes", [contracts_service_1.ContractsService])
 ], ContractsController);

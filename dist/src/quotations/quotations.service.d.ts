@@ -32,11 +32,14 @@ export declare class QuotationsService {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -65,10 +68,10 @@ export declare class QuotationsService {
         };
         project: {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -82,11 +85,14 @@ export declare class QuotationsService {
         } | null;
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -115,10 +121,10 @@ export declare class QuotationsService {
         };
         project: {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -143,11 +149,14 @@ export declare class QuotationsService {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -157,7 +166,7 @@ export declare class QuotationsService {
         quotationNumber: string;
         vatAmount: number;
     }) | null>;
-    update(id: string, data: any): Promise<{
+    update(id: string, data: any, reqUser?: any): Promise<{
         client: {
             id: string;
             createdAt: Date;
@@ -187,11 +196,14 @@ export declare class QuotationsService {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -201,13 +213,16 @@ export declare class QuotationsService {
         quotationNumber: string;
         vatAmount: number;
     }>;
-    remove(id: string): Promise<{
+    remove(id: string, reqUser?: any): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -217,12 +232,12 @@ export declare class QuotationsService {
         quotationNumber: string;
         vatAmount: number;
     }>;
-    convertToProject(id: string): Promise<{
+    convertToProject(id: string, userName: string): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;

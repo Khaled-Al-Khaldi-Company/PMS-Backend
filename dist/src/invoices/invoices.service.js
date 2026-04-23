@@ -25,7 +25,7 @@ let InvoicesService = class InvoicesService {
             const { executionData, taxPercent = 0, advanceDeduction = 0, delayPenalty = 0, otherDeductions = 0, deductionTiming = 'AFTER_VAT', deferDeductions = false } = payload;
             const contract = await tx.contract.findUnique({
                 where: { id: contractId },
-                include: { project: true }
+                include: { project: true, items: true }
             });
             if (!contract)
                 throw new common_1.BadRequestException('Contract not found');
@@ -37,20 +37,29 @@ let InvoicesService = class InvoicesService {
                 });
                 if (!boqItem)
                     throw new common_1.BadRequestException(`BOQ Item ${item.boqItemId} not found`);
+                let invoiceUnitPrice = boqItem.unitPrice;
+                let invoiceMaxQuantity = boqItem.quantity;
+                if (contract.type === 'SUBCONTRACT' && contract.items && contract.items.length > 0) {
+                    const cItem = contract.items.find(ci => ci.boqItemId === boqItem.id);
+                    if (!cItem)
+                        throw new common_1.BadRequestException(`BOQ Item ${item.boqItemId} is not assigned to this contract`);
+                    invoiceUnitPrice = cItem.unitPrice;
+                    invoiceMaxQuantity = cItem.assignedQty;
+                }
                 const previousQty = boqItem.executedQty;
                 const currentQty = parseFloat(item.currentQty);
                 const totalQty = previousQty + currentQty;
-                if (totalQty > boqItem.quantity) {
+                if (totalQty > invoiceMaxQuantity) {
                     throw new common_1.BadRequestException(`Executed quantity exceeds planned for BOQ item ${boqItem.itemCode || boqItem.description}`);
                 }
-                const currentValue = currentQty * boqItem.unitPrice;
+                const currentValue = currentQty * invoiceUnitPrice;
                 grossAmount += currentValue;
                 detailsToCreate.push({
                     boqItem: { connect: { id: boqItem.id } },
                     previousQty,
                     currentQty,
                     totalQty,
-                    unitPrice: boqItem.unitPrice,
+                    unitPrice: invoiceUnitPrice,
                     currentValue
                 });
                 await tx.bOQItem.update({
@@ -82,6 +91,7 @@ let InvoicesService = class InvoicesService {
                     deferDeductions,
                     netAmount,
                     status: 'DRAFT',
+                    createdBy: payload.createdBy,
                     details: {
                         create: detailsToCreate
                     }
@@ -94,10 +104,14 @@ let InvoicesService = class InvoicesService {
     async syncPaymentStatus(invoiceId) {
         return this.daftraService.syncInvoicePaymentStatus(invoiceId);
     }
-    async certifyInvoice(invoiceId) {
+    async certifyInvoice(invoiceId, userName) {
         const updated = await this.prisma.invoice.update({
             where: { id: invoiceId },
-            data: { status: 'CERTIFIED' }
+            data: {
+                status: 'CERTIFIED',
+                approvedBy: userName,
+                approvedAt: new Date()
+            }
         });
         try {
             await this.daftraService.pushInvoice(invoiceId);
@@ -155,7 +169,7 @@ let InvoicesService = class InvoicesService {
         return this.prisma.$transaction(async (tx) => {
             const existingInvoice = await tx.invoice.findUnique({
                 where: { id },
-                include: { details: true, contract: true }
+                include: { details: true, contract: { include: { items: true } } }
             });
             if (!existingInvoice)
                 throw new common_1.BadRequestException('Invoice not found');
@@ -182,20 +196,29 @@ let InvoicesService = class InvoicesService {
                 });
                 if (!boqItem)
                     throw new common_1.BadRequestException(`BOQ Item ${item.boqItemId} not found`);
+                let invoiceUnitPrice = boqItem.unitPrice;
+                let invoiceMaxQuantity = boqItem.quantity;
+                if (contract.type === 'SUBCONTRACT' && contract.items && contract.items.length > 0) {
+                    const cItem = contract.items.find(ci => ci.boqItemId === boqItem.id);
+                    if (!cItem)
+                        throw new common_1.BadRequestException(`BOQ Item ${item.boqItemId} is not assigned to this contract`);
+                    invoiceUnitPrice = cItem.unitPrice;
+                    invoiceMaxQuantity = cItem.assignedQty;
+                }
                 const previousQty = boqItem.executedQty;
                 const currentQty = parseFloat(item.currentQty);
                 const totalQty = previousQty + currentQty;
-                if (totalQty > boqItem.quantity) {
+                if (totalQty > invoiceMaxQuantity) {
                     throw new common_1.BadRequestException(`Executed quantity exceeds planned for BOQ item ${boqItem.itemCode || boqItem.description}`);
                 }
-                const currentValue = currentQty * boqItem.unitPrice;
+                const currentValue = currentQty * invoiceUnitPrice;
                 grossAmount += currentValue;
                 detailsToCreate.push({
                     boqItem: { connect: { id: boqItem.id } },
                     previousQty,
                     currentQty,
                     totalQty,
-                    unitPrice: boqItem.unitPrice,
+                    unitPrice: invoiceUnitPrice,
                     currentValue
                 });
                 await tx.bOQItem.update({

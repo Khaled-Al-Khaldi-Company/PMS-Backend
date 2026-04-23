@@ -2,12 +2,15 @@ import { ContractsService } from './contracts.service';
 export declare class ContractsController {
     private readonly contractsService;
     constructor(contractsService: ContractsService);
-    create(createContractDto: any): Promise<{
+    create(createContractDto: any, req: any): Promise<{
         id: string;
-        projectId: string;
-        retentionPercent: number;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
+        retentionPercent: number;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         type: string;
         subcontractorId: string | null;
         referenceNumber: string;
@@ -16,10 +19,13 @@ export declare class ContractsController {
     }>;
     findAllByProject(projectId: string): Promise<{
         id: string;
-        projectId: string;
-        retentionPercent: number;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
+        retentionPercent: number;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         type: string;
         subcontractorId: string | null;
         referenceNumber: string;
@@ -28,10 +34,13 @@ export declare class ContractsController {
     }[]>;
     findOne(id: string): Promise<{
         id: string;
-        projectId: string;
-        retentionPercent: number;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
+        retentionPercent: number;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         type: string;
         subcontractorId: string | null;
         referenceNumber: string;
@@ -40,10 +49,13 @@ export declare class ContractsController {
     }>;
     update(id: string, updateDto: any): Promise<{
         id: string;
-        projectId: string;
-        retentionPercent: number;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
+        retentionPercent: number;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         type: string;
         subcontractorId: string | null;
         referenceNumber: string;
@@ -52,17 +64,20 @@ export declare class ContractsController {
     }>;
     remove(id: string): Promise<{
         id: string;
-        projectId: string;
-        retentionPercent: number;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
+        retentionPercent: number;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         type: string;
         subcontractorId: string | null;
         referenceNumber: string;
         totalValue: number;
         advancePayment: number;
     }>;
-    createChangeOrder(contractId: string, changeOrderDto: any): Promise<{
+    createChangeOrder(contractId: string, changeOrderDto: any, req: any): Promise<{
         items: {
             id: string;
             createdAt: Date;
@@ -76,11 +91,13 @@ export declare class ContractsController {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         contractId: string;
         issueDate: Date;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
         amount: number;
         type: string;
         title: string;

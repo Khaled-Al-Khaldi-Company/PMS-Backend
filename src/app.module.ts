@@ -17,6 +17,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { ReportsModule } from './reports/reports.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { QuotationTemplatesModule } from './quotation-templates/quotation-templates.module';
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { InventoryModule } from './inventory/inventory.module';
     ContactsModule,
     ReportsModule,
     ExpensesModule,
-    InventoryModule
+    InventoryModule,
+    QuotationTemplatesModule
   ],
   controllers: [AppController],
   providers: [AppService],

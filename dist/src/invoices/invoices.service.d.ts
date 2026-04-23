@@ -7,10 +7,13 @@ export declare class InvoicesService {
     generateMustaqlasa(contractId: string, payload: any): Promise<{
         contract: {
             id: string;
-            projectId: string;
-            retentionPercent: number;
             createdAt: Date;
             updatedAt: Date;
+            projectId: string;
+            retentionPercent: number;
+            createdBy: string | null;
+            approvedBy: string | null;
+            approvedAt: Date | null;
             type: string;
             subcontractorId: string | null;
             referenceNumber: string;
@@ -29,6 +32,8 @@ export declare class InvoicesService {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string;
         contractId: string;
         invoiceNumber: string;
@@ -50,16 +55,20 @@ export declare class InvoicesService {
         daftraInvoiceId: string | null;
         paymentStatus: string;
         paidAmount: number;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
     }>;
     syncPaymentStatus(invoiceId: string): Promise<{
         paymentStatus: string;
         paidAmount: number;
+        daftraRaw: any;
     }>;
-    certifyInvoice(invoiceId: string): Promise<{
+    certifyInvoice(invoiceId: string, userName: string): Promise<{
         daftraExternalId: string | null | undefined;
         id?: string | undefined;
+        createdAt?: Date | undefined;
+        updatedAt?: Date | undefined;
         projectId?: string | undefined;
         contractId?: string | undefined;
         invoiceNumber?: string | undefined;
@@ -81,16 +90,17 @@ export declare class InvoicesService {
         daftraInvoiceId?: string | null | undefined;
         paymentStatus?: string | undefined;
         paidAmount?: number | undefined;
-        createdAt?: Date | undefined;
-        updatedAt?: Date | undefined;
+        createdBy?: string | null | undefined;
+        approvedBy?: string | null | undefined;
+        approvedAt?: Date | null | undefined;
     }>;
     findAllByContract(contractId: string): Promise<({
         project: {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -121,10 +131,13 @@ export declare class InvoicesService {
             } | null;
         } & {
             id: string;
-            projectId: string;
-            retentionPercent: number;
             createdAt: Date;
             updatedAt: Date;
+            projectId: string;
+            retentionPercent: number;
+            createdBy: string | null;
+            approvedBy: string | null;
+            approvedAt: Date | null;
             type: string;
             subcontractorId: string | null;
             referenceNumber: string;
@@ -134,9 +147,9 @@ export declare class InvoicesService {
         details: ({
             boqItem: {
                 id: string;
-                projectId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                projectId: string;
                 description: string;
                 totalValue: number;
                 unitPrice: number;
@@ -161,6 +174,8 @@ export declare class InvoicesService {
         })[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string;
         contractId: string;
         invoiceNumber: string;
@@ -182,8 +197,9 @@ export declare class InvoicesService {
         daftraInvoiceId: string | null;
         paymentStatus: string;
         paidAmount: number;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
     })[]>;
     findOne(id: string): Promise<({
         project: {
@@ -205,10 +221,10 @@ export declare class InvoicesService {
             } | null;
         } & {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -239,10 +255,13 @@ export declare class InvoicesService {
             } | null;
         } & {
             id: string;
-            projectId: string;
-            retentionPercent: number;
             createdAt: Date;
             updatedAt: Date;
+            projectId: string;
+            retentionPercent: number;
+            createdBy: string | null;
+            approvedBy: string | null;
+            approvedAt: Date | null;
             type: string;
             subcontractorId: string | null;
             referenceNumber: string;
@@ -252,9 +271,9 @@ export declare class InvoicesService {
         details: ({
             boqItem: {
                 id: string;
-                projectId: string;
                 createdAt: Date;
                 updatedAt: Date;
+                projectId: string;
                 description: string;
                 totalValue: number;
                 unitPrice: number;
@@ -279,6 +298,8 @@ export declare class InvoicesService {
         })[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string;
         contractId: string;
         invoiceNumber: string;
@@ -300,11 +321,14 @@ export declare class InvoicesService {
         daftraInvoiceId: string | null;
         paymentStatus: string;
         paidAmount: number;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
     }) | null>;
     deleteMustaqlasa(id: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string;
         contractId: string;
         invoiceNumber: string;
@@ -326,16 +350,20 @@ export declare class InvoicesService {
         daftraInvoiceId: string | null;
         paymentStatus: string;
         paidAmount: number;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
     }>;
     updateMustaqlasa(id: string, payload: any): Promise<{
         contract: {
             id: string;
-            projectId: string;
-            retentionPercent: number;
             createdAt: Date;
             updatedAt: Date;
+            projectId: string;
+            retentionPercent: number;
+            createdBy: string | null;
+            approvedBy: string | null;
+            approvedAt: Date | null;
             type: string;
             subcontractorId: string | null;
             referenceNumber: string;
@@ -354,6 +382,8 @@ export declare class InvoicesService {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string;
         contractId: string;
         invoiceNumber: string;
@@ -375,7 +405,8 @@ export declare class InvoicesService {
         daftraInvoiceId: string | null;
         paymentStatus: string;
         paidAmount: number;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
     }>;
 }

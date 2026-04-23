@@ -8,17 +8,17 @@ export declare class DaftraService {
     getDaftraCostCenters(): Promise<any>;
     getPmsProjects(): Promise<{
         id: string;
-        status: string;
         name: string;
+        status: string;
         code: string;
         daftraCostCenterId: string | null;
     }[]>;
     linkProject(id: string, daftraCostCenterId: string | null): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;
@@ -122,5 +122,10 @@ export declare class DaftraService {
     syncInvoicePaymentStatus(invoiceId: string): Promise<{
         paymentStatus: string;
         paidAmount: number;
+        daftraRaw: any;
+    }>;
+    syncPurchaseOrderStatus(poId: string, daftraId: string): Promise<{
+        status: string;
+        daftraData: any;
     }>;
 }

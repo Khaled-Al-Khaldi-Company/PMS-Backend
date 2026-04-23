@@ -5,10 +5,10 @@ export declare class ExpensesService {
     create(data: any): Promise<{
         project: {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -22,10 +22,10 @@ export declare class ExpensesService {
         } | null;
     } & {
         id: string;
-        projectId: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string | null;
+        status: string;
         expenseNo: string;
         description: string;
         category: string;
@@ -37,10 +37,10 @@ export declare class ExpensesService {
     findAll(): Promise<({
         project: {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -54,10 +54,10 @@ export declare class ExpensesService {
         } | null;
     } & {
         id: string;
-        projectId: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string | null;
+        status: string;
         expenseNo: string;
         description: string;
         category: string;
@@ -68,10 +68,10 @@ export declare class ExpensesService {
     })[]>;
     remove(id: string): Promise<{
         id: string;
-        projectId: string | null;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string | null;
+        status: string;
         expenseNo: string;
         description: string;
         category: string;

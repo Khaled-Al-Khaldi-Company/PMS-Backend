@@ -50,7 +50,8 @@ let QuotationsService = class QuotationsService {
                         totalValue: i.quantity * i.unitPrice,
                         estimatedUnitCost: i.estimatedUnitCost || 0
                     }))
-                }
+                },
+                createdBy: data.createdBy
             },
             include: {
                 client: true,
@@ -70,7 +71,16 @@ let QuotationsService = class QuotationsService {
             include: { client: true, items: true, project: true }
         });
     }
-    async update(id, data) {
+    async update(id, data, reqUser) {
+        const existing = await this.prisma.quotation.findUnique({ where: { id } });
+        if (!existing)
+            throw new common_1.NotFoundException('Quotation not found');
+        if (existing.status === 'APPROVED') {
+            const userPermissions = reqUser?.permissions || [];
+            if (!userPermissions.includes('QUOTATION_FORCE_EDIT')) {
+                throw new common_1.BadRequestException('لا يمكن تعديل عرض سعر معتمد.');
+            }
+        }
         const { clientName, title, items, hasVat, technicalOffer, termsConditions, status } = data;
         const totalAmount = items.reduce((sum, i) => sum + (i.quantity * i.unitPrice), 0);
         const vatAmount = hasVat ? totalAmount * 0.15 : 0;
@@ -110,16 +120,20 @@ let QuotationsService = class QuotationsService {
             include: { client: true, items: true }
         });
     }
-    async remove(id) {
+    async remove(id, reqUser) {
         const quotation = await this.prisma.quotation.findUnique({ where: { id } });
         if (!quotation)
             throw new common_1.NotFoundException('Quotation not found');
         if (quotation.projectId || quotation.status === 'APPROVED') {
-            throw new common_1.BadRequestException('لا يمكن حذف عرض سعر معتمد وتحول إلى مشروع.');
+            const userPermissions = reqUser?.permissions || [];
+            if (!userPermissions.includes('QUOTATION_FORCE_DELETE')) {
+                throw new common_1.BadRequestException('لا يمكن حذف عرض سعر معتمد أو تحول إلى مشروع.');
+            }
         }
+        await this.prisma.quotationItem.deleteMany({ where: { quotationId: id } });
         return this.prisma.quotation.delete({ where: { id } });
     }
-    async convertToProject(id) {
+    async convertToProject(id, userName) {
         const quotation = await this.prisma.quotation.findUnique({
             where: { id },
             include: { client: true, items: true }
@@ -164,7 +178,12 @@ let QuotationsService = class QuotationsService {
         });
         await this.prisma.quotation.update({
             where: { id },
-            data: { status: 'APPROVED', projectId: project.id }
+            data: {
+                status: 'APPROVED',
+                projectId: project.id,
+                approvedBy: userName,
+                approvedAt: new Date()
+            }
         });
         return project;
     }

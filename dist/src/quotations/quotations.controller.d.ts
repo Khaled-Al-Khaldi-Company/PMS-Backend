@@ -2,7 +2,7 @@ import { QuotationsService } from './quotations.service';
 export declare class QuotationsController {
     private readonly quotationsService;
     constructor(quotationsService: QuotationsService);
-    create(createQuotationDto: any): Promise<{
+    create(createQuotationDto: any, req: any): Promise<{
         client: {
             id: string;
             createdAt: Date;
@@ -32,11 +32,14 @@ export declare class QuotationsController {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -65,10 +68,10 @@ export declare class QuotationsController {
         };
         project: {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -82,11 +85,14 @@ export declare class QuotationsController {
         } | null;
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -115,10 +121,10 @@ export declare class QuotationsController {
         };
         project: {
             id: string;
-            status: string;
             createdAt: Date;
             updatedAt: Date;
             name: string;
+            status: string;
             description: string | null;
             code: string;
             startDate: Date | null;
@@ -143,11 +149,14 @@ export declare class QuotationsController {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -157,7 +166,7 @@ export declare class QuotationsController {
         quotationNumber: string;
         vatAmount: number;
     }) | null>;
-    update(id: string, data: any): Promise<{
+    update(id: string, updateQuotationDto: any, req: any): Promise<{
         client: {
             id: string;
             createdAt: Date;
@@ -187,11 +196,14 @@ export declare class QuotationsController {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;
@@ -201,12 +213,12 @@ export declare class QuotationsController {
         quotationNumber: string;
         vatAmount: number;
     }>;
-    convertToProject(id: string): Promise<{
+    convertToProject(id: string, req: any): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;
@@ -218,13 +230,16 @@ export declare class QuotationsController {
         daftraCustomerId: string | null;
         daftraCostCenterId: string | null;
     }>;
-    remove(id: string): Promise<{
+    remove(id: string, req: any): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         projectId: string | null;
         netAmount: number;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
+        approvedAt: Date | null;
         totalAmount: number;
         clientId: string;
         title: string;

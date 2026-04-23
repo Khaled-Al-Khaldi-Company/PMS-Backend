@@ -4,9 +4,9 @@ export declare class BoqController {
     constructor(boqService: BoqService);
     createSingleItem(projectId: string, createDto: any): Promise<{
         id: string;
-        projectId: string;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
         description: string;
         totalValue: number;
         unitPrice: number;
@@ -22,9 +22,9 @@ export declare class BoqController {
     createBatch(projectId: string, items: any[]): Promise<any>;
     findAllByProject(projectId: string): Promise<{
         id: string;
-        projectId: string;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
         description: string;
         totalValue: number;
         unitPrice: number;
@@ -39,9 +39,9 @@ export declare class BoqController {
     }[]>;
     updateItem(id: string, updateDto: any): Promise<{
         id: string;
-        projectId: string;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
         description: string;
         totalValue: number;
         unitPrice: number;
@@ -56,9 +56,9 @@ export declare class BoqController {
     }>;
     deleteItem(id: string): Promise<{
         id: string;
-        projectId: string;
         createdAt: Date;
         updatedAt: Date;
+        projectId: string;
         description: string;
         totalValue: number;
         unitPrice: number;

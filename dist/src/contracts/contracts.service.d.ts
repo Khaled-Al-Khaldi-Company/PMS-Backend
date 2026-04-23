@@ -22,11 +22,13 @@ export declare class ContractsService {
         }[];
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         contractId: string;
         issueDate: Date;
         status: string;
-        createdAt: Date;
-        updatedAt: Date;
+        createdBy: string | null;
+        approvedBy: string | null;
         amount: number;
         type: string;
         title: string;

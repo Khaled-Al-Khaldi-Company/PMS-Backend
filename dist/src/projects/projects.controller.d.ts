@@ -4,10 +4,10 @@ export declare class ProjectsController {
     constructor(projectsService: ProjectsService);
     create(createProjectDto: any, req: any): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;
@@ -21,10 +21,10 @@ export declare class ProjectsController {
     }>;
     findAll(): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;
@@ -36,12 +36,39 @@ export declare class ProjectsController {
         daftraCustomerId: string | null;
         daftraCostCenterId: string | null;
     }[]>;
+    getGlobalDashboard(): Promise<{
+        overview: {
+            totalProjects: number;
+            totalTargetRevenue: number;
+            totalEstimatedBudget: number;
+            totalActualRevenue: number;
+            totalActualCost: number;
+            grossProfit: number;
+            overallMargin: number;
+        };
+        costBreakdown: {
+            materials: number;
+            subcontractors: number;
+            expenses: number;
+        };
+        projects: {
+            id: string;
+            name: string;
+            code: string;
+            status: string;
+            targetRevenue: number;
+            estimatedBudget: number;
+            actualRevenue: number;
+            actualCost: number;
+            profitMargin: number;
+        }[];
+    }>;
     findOne(id: string): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;
@@ -85,10 +112,10 @@ export declare class ProjectsController {
     }>;
     update(id: string, updateProjectDto: any): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;
@@ -102,10 +129,10 @@ export declare class ProjectsController {
     }>;
     remove(id: string): Promise<{
         id: string;
-        status: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        status: string;
         description: string | null;
         code: string;
         startDate: Date | null;

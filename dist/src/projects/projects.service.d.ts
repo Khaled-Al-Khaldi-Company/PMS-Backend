@@ -38,4 +38,31 @@ export declare class ProjectsService {
             executedQty: number;
         }[];
     }>;
+    getGlobalDashboard(): Promise<{
+        overview: {
+            totalProjects: number;
+            totalTargetRevenue: number;
+            totalEstimatedBudget: number;
+            totalActualRevenue: number;
+            totalActualCost: number;
+            grossProfit: number;
+            overallMargin: number;
+        };
+        costBreakdown: {
+            materials: number;
+            subcontractors: number;
+            expenses: number;
+        };
+        projects: {
+            id: string;
+            name: string;
+            code: string;
+            status: string;
+            targetRevenue: number;
+            estimatedBudget: number;
+            actualRevenue: number;
+            actualCost: number;
+            profitMargin: number;
+        }[];
+    }>;
 }

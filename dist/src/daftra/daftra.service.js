@@ -281,8 +281,6 @@ let DaftraService = class DaftraService {
                 PurchaseOrder: {
                     staff_id: 1,
                     supplier_id: Number(supplier.daftraSupplierId),
-                    supplier_business_name: supplier.name,
-                    supplier_email: supplier.email || "vendor@pms.system",
                     date: new Date().toISOString().split('T')[0],
                     draft: 1,
                     status: 4,
@@ -375,14 +373,14 @@ let DaftraService = class DaftraService {
             },
             Supplier: {
                 id: Number(po.supplier.daftraSupplierId),
-                email: "test.vendor.pms@daftra.com"
+                email: (po.supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)) ? po.supplier.email : `vendor${po.supplier.daftraSupplierId}@example.com`
             },
             PurchaseOrderItem: po.items.map((item, index) => ({
                 item: item.material.name || `مادة ${index + 1}`,
                 description: item.material.name || "",
                 quantity: typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1,
                 unit_price: typeof item.unitPrice === 'number' && item.unitPrice >= 0 ? item.unitPrice : 0,
-                tax1: po.taxAmount > 0 ? 15 : 0
+                tax1: po.taxAmount > 0 ? 1 : 0
             }))
         };
         if (po.project?.daftraCostCenterId) {
@@ -469,7 +467,7 @@ let DaftraService = class DaftraService {
         }
         const { apiKey, domain } = await this.getDaftraConfig();
         const isMainContract = invoice.contract.type === 'MAIN_CONTRACT';
-        const endpoint = isMainContract ? 'invoices' : 'purchase_orders';
+        const endpoint = isMainContract ? 'invoices' : 'purchase_invoices';
         try {
             const response = await fetch(`https://${domain}.daftra.com/api2/${endpoint}/${invoice.daftraInvoiceId}`, {
                 method: 'GET',
@@ -477,18 +475,33 @@ let DaftraService = class DaftraService {
             });
             if (!response.ok) {
                 if (response.status === 404) {
-                    throw new common_1.BadRequestException('لم يتم العثور على هذا المستند في دفترة. قد يكون قد تم حذفه أو أن رقم التزامن غير صحيح.');
+                    await this.prisma.invoice.update({
+                        where: { id: invoiceId },
+                        data: {
+                            status: 'DRAFT',
+                            daftraInvoiceId: null,
+                            paymentStatus: 'UNPAID',
+                            paidAmount: 0,
+                        }
+                    });
+                    throw new common_1.BadRequestException('تنبيه: لم يتم العثور على المستند في دفترة (قد يكون محذوفاً). ' +
+                        'تم إعادة المستخلص تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.');
                 }
                 throw new Error(`فشل الاتصال: ${response.status}`);
             }
             const resData = await response.json();
-            const nodeName = isMainContract ? 'Invoice' : 'PurchaseOrder';
-            const daftraDoc = resData.data?.[nodeName] || resData[nodeName] || resData.data || {};
+            const nodeName = isMainContract ? 'Invoice' : 'PurchaseInvoice';
+            const daftraDoc = resData.data?.[nodeName] || resData[nodeName] || resData.data?.PurchaseOrder || resData.data || {};
             let payStatus = "UNPAID";
             let paidAmt = 0;
-            const totalAmount = Number(daftraDoc.total || daftraDoc.total_amount || invoice.netAmount);
-            const dueAmount = isMainContract ? Number(daftraDoc.due_amount ?? totalAmount) : Number(daftraDoc.unpaid ?? totalAmount);
-            if (totalAmount > 0) {
+            const totalAmount = Number(daftraDoc.summary_total ?? daftraDoc.total ?? daftraDoc.total_amount ?? invoice.netAmount);
+            const dueAmount = Number(daftraDoc.summary_unpaid ?? daftraDoc.due_amount ?? daftraDoc.unpaid ?? totalAmount);
+            const daftraStatus = daftraDoc.payment_status || daftraDoc.status;
+            if (daftraStatus === 3 || daftraStatus === 2 || daftraStatus === "Paid" || daftraStatus === "مدفوع") {
+                payStatus = "PAID";
+                paidAmt = totalAmount;
+            }
+            else if (totalAmount > 0) {
                 if (dueAmount <= 0) {
                     payStatus = "PAID";
                     paidAmt = totalAmount;
@@ -498,16 +511,40 @@ let DaftraService = class DaftraService {
                     paidAmt = totalAmount - dueAmount;
                 }
             }
-            if (!isMainContract && (daftraDoc.status === 5 || daftraDoc.status === 'Billed')) {
-            }
             await this.prisma.invoice.update({
                 where: { id: invoiceId },
                 data: { paymentStatus: payStatus, paidAmount: paidAmt }
             });
-            return { paymentStatus: payStatus, paidAmount: paidAmt };
+            return { paymentStatus: payStatus, paidAmount: paidAmt, daftraRaw: resData };
         }
         catch (err) {
             throw new common_1.BadRequestException(`فشل استرداد حالة السداد من دفترة: ${err.message}`);
+        }
+    }
+    async syncPurchaseOrderStatus(poId, daftraId) {
+        const { apiKey, domain } = await this.getDaftraConfig();
+        try {
+            const response = await fetch(`https://${domain}.daftra.com/api2/purchase_orders/${daftraId}`, {
+                method: 'GET',
+                headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
+            });
+            if (!response.ok) {
+                if (response.status === 404) {
+                    await this.prisma.purchaseOrder.update({
+                        where: { id: poId },
+                        data: { status: 'PENDING', daftraId: null }
+                    });
+                    throw new common_1.BadRequestException('تنبيه: لم يتم العثور على أمر الشراء في دفترة (قد يكون محذوفاً). ' +
+                        'تم إعادته تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.');
+                }
+                throw new Error(`فشل الاتصال بدفترة: ${response.status}`);
+            }
+            const resData = await response.json();
+            const poData = resData.data?.PurchaseOrder || resData.PurchaseOrder || resData.data || {};
+            return { status: 'synced', daftraData: poData };
+        }
+        catch (err) {
+            throw new common_1.BadRequestException(`فشل مزامنة أمر الشراء من دفترة: ${err.message}`);
         }
     }
 };

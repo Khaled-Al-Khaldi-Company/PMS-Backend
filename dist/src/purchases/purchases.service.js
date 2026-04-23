@@ -55,7 +55,8 @@ let PurchasesService = class PurchasesService {
                 },
                 totalAmount: items.reduce((sum, item) => sum + ((Number(item.qty) || 1) * (Number(item.price) || 0)), 0),
                 taxAmount: data.hasVat ? (items.reduce((sum, item) => sum + ((Number(item.qty) || 1) * (Number(item.price) || 0)), 0) * 0.15) : 0,
-                netAmount: data.hasVat ? (items.reduce((sum, item) => sum + ((Number(item.qty) || 1) * (Number(item.price) || 0)), 0) * 1.15) : items.reduce((sum, item) => sum + ((Number(item.qty) || 1) * (Number(item.price) || 0)), 0)
+                netAmount: data.hasVat ? (items.reduce((sum, item) => sum + ((Number(item.qty) || 1) * (Number(item.price) || 0)), 0) * 1.15) : items.reduce((sum, item) => sum + ((Number(item.qty) || 1) * (Number(item.price) || 0)), 0),
+                createdBy: data.createdBy
             },
             include: {
                 items: { include: { material: true } },
@@ -69,16 +70,50 @@ let PurchasesService = class PurchasesService {
             orderBy: { createdAt: 'desc' }
         });
     }
-    async approveStatus(id) {
+    async findOne(id) {
+        const po = await this.prisma.purchaseOrder.findUnique({
+            where: { id },
+            include: {
+                project: true,
+                supplier: true,
+                items: { include: { material: true } }
+            }
+        });
+        if (!po)
+            throw new common_1.NotFoundException('طلب الشراء غير موجود');
+        return po;
+    }
+    async syncStatusFromDaftra(id) {
+        const po = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+        if (!po)
+            throw new common_1.NotFoundException('طلب الشراء غير موجود');
+        if (!po.daftraId)
+            throw new common_1.BadRequestException('طلب الشراء غير مربوط بدفترة!');
         try {
-            await this.daftraService.pushPurchaseOrder(id);
+            const result = await this.daftraService.syncPurchaseOrderStatus(id, po.daftraId);
+            return result;
+        }
+        catch (err) {
+            throw new common_1.BadRequestException(err.message);
+        }
+    }
+    async approveStatus(id, userName) {
+        let daftraId;
+        try {
+            const result = await this.daftraService.pushPurchaseOrder(id);
+            daftraId = result?.daftraId;
         }
         catch (err) {
             throw new common_1.BadRequestException(`لا يمكن اعتماد طلب الشراء بسبب فشل المزامنة مع دفترة: ${err.message}`);
         }
         return this.prisma.purchaseOrder.update({
             where: { id },
-            data: { status: 'APPROVED' }
+            data: {
+                status: 'APPROVED',
+                approvedBy: userName,
+                approvedAt: new Date(),
+                ...(daftraId ? { daftraId } : {})
+            }
         });
     }
     async remove(id) {

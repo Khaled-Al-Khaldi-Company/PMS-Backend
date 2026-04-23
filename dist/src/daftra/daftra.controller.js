@@ -16,6 +16,8 @@ exports.DaftraController = void 0;
 const common_1 = require("@nestjs/common");
 const daftra_service_1 = require("./daftra.service");
 const passport_1 = require("@nestjs/passport");
+const permissions_guard_1 = require("../auth/permissions.guard");
+const permissions_decorator_1 = require("../auth/permissions.decorator");
 let DaftraController = class DaftraController {
     daftraService;
     constructor(daftraService) {
@@ -76,8 +78,9 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], DaftraController.prototype, "syncCostCenters", null);
 __decorate([
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), permissions_guard_1.PermissionsGuard),
     (0, common_1.Post)('push-invoice/:invoiceId'),
+    (0, permissions_decorator_1.Permissions)('INVOICE_APPROVE'),
     __param(0, (0, common_1.Param)('invoiceId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
