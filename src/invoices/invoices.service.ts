@@ -97,6 +97,7 @@ export class InvoicesService {
           deferDeductions,
           netAmount,
           status: 'DRAFT',
+          createdBy: payload.createdBy,
           details: {
             create: detailsToCreate
           }
@@ -112,11 +113,15 @@ export class InvoicesService {
     return this.daftraService.syncInvoicePaymentStatus(invoiceId);
   }
 
-  async certifyInvoice(invoiceId: string) {
+  async certifyInvoice(invoiceId: string, userName: string) {
     // 1. Initial Local Update
     const updated = await this.prisma.invoice.update({
       where: { id: invoiceId },
-      data: { status: 'CERTIFIED' }
+      data: { 
+        status: 'CERTIFIED',
+        approvedBy: userName,
+        approvedAt: new Date()
+      }
     });
 
     // 2. Push to Daftra

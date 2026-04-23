@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { QuotationsService } from './quotations.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -11,7 +11,8 @@ export class QuotationsController {
 
   @Post()
   @Permissions('QUOTATION_CREATE')
-  create(@Body() createQuotationDto: any) {
+  create(@Body() createQuotationDto: any, @Req() req: any) {
+    createQuotationDto.createdBy = req.user.name;
     return this.quotationsService.create(createQuotationDto);
   }
 
@@ -26,20 +27,20 @@ export class QuotationsController {
   }
 
   @Patch(':id')
-  @Permissions('QUOTATION_CREATE', 'QUOTATION_APPROVE')
-  update(@Param('id') id: string, @Body() data: any) {
-    return this.quotationsService.update(id, data);
+  @Permissions('QUOTATION_CREATE', 'QUOTATION_APPROVE', 'QUOTATION_FORCE_EDIT')
+  update(@Param('id') id: string, @Body() updateQuotationDto: any, @Req() req: any) {
+    return this.quotationsService.update(id, updateQuotationDto, req.user);
   }
 
   @Post(':id/convert')
   @Permissions('QUOTATION_APPROVE')
-  convertToProject(@Param('id') id: string) {
-    return this.quotationsService.convertToProject(id);
+  convertToProject(@Param('id') id: string, @Req() req: any) {
+    return this.quotationsService.convertToProject(id, req.user.name);
   }
 
   @Delete(':id')
-  @Permissions('QUOTATION_APPROVE')
-  remove(@Param('id') id: string) {
-    return this.quotationsService.remove(id);
+  @Permissions('QUOTATION_APPROVE', 'QUOTATION_FORCE_DELETE')
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.quotationsService.remove(id, req.user);
   }
 }

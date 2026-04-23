@@ -74,6 +74,8 @@ export class ContractsService {
           type, // ADDITION or DEDUCTION
           amount,
           status: status || 'APPROVED', // Defaulting to approved for now to affect value
+          createdBy: data.createdBy,
+          approvedBy: status === 'APPROVED' ? data.createdBy : undefined,
           contract: { connect: { id: contractId } },
           items: {
             create: items?.map((i: any) => ({

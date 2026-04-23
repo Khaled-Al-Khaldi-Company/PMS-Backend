@@ -48,7 +48,8 @@ export class PurchasesService {
         },
         totalAmount: items.reduce((sum: number, item: any) => sum + ((Number(item.qty)||1) * (Number(item.price)||0)), 0),
         taxAmount: data.hasVat ? (items.reduce((sum: number, item: any) => sum + ((Number(item.qty)||1) * (Number(item.price)||0)), 0) * 0.15) : 0,
-        netAmount: data.hasVat ? (items.reduce((sum: number, item: any) => sum + ((Number(item.qty)||1) * (Number(item.price)||0)), 0) * 1.15) : items.reduce((sum: number, item: any) => sum + ((Number(item.qty)||1) * (Number(item.price)||0)), 0)
+        netAmount: data.hasVat ? (items.reduce((sum: number, item: any) => sum + ((Number(item.qty)||1) * (Number(item.price)||0)), 0) * 1.15) : items.reduce((sum: number, item: any) => sum + ((Number(item.qty)||1) * (Number(item.price)||0)), 0),
+        createdBy: data.createdBy
       },
       include: {
         items: { include: { material: true } },
@@ -90,7 +91,7 @@ export class PurchasesService {
     }
   }
 
-  async approveStatus(id: string) {
+  async approveStatus(id: string, userName: string) {
     // 1. Try to push to Daftra
     let daftraId: string | undefined;
     try {
@@ -105,6 +106,8 @@ export class PurchasesService {
       where: { id },
       data: { 
         status: 'APPROVED',
+        approvedBy: userName,
+        approvedAt: new Date(),
         ...(daftraId ? { daftraId } : {})
       }
     });

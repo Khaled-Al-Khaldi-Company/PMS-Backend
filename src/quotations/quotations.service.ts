@@ -41,7 +41,8 @@ export class QuotationsService {
             totalValue: i.quantity * i.unitPrice,
             estimatedUnitCost: i.estimatedUnitCost || 0
           }))
-        }
+        },
+        createdBy: data.createdBy
       },
       include: {
         client: true,
@@ -64,7 +65,17 @@ export class QuotationsService {
     });
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: any, reqUser?: any) {
+    const existing = await this.prisma.quotation.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Quotation not found');
+    
+    if (existing.status === 'APPROVED') {
+      const userPermissions = reqUser?.permissions || [];
+      if (!userPermissions.includes('QUOTATION_FORCE_EDIT')) {
+        throw new BadRequestException('لا يمكن تعديل عرض سعر معتمد.');
+      }
+    }
+
     const { clientName, title, items, hasVat, technicalOffer, termsConditions, status } = data;
     
     // Calculate new total
@@ -110,18 +121,22 @@ export class QuotationsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, reqUser?: any) {
     const quotation = await this.prisma.quotation.findUnique({ where: { id } });
     if (!quotation) throw new NotFoundException('Quotation not found');
 
     if (quotation.projectId || quotation.status === 'APPROVED') {
-      throw new BadRequestException('لا يمكن حذف عرض سعر معتمد وتحول إلى مشروع.');
+      const userPermissions = reqUser?.permissions || [];
+      if (!userPermissions.includes('QUOTATION_FORCE_DELETE')) {
+        throw new BadRequestException('لا يمكن حذف عرض سعر معتمد أو تحول إلى مشروع.');
+      }
     }
 
+    await this.prisma.quotationItem.deleteMany({ where: { quotationId: id } });
     return this.prisma.quotation.delete({ where: { id } });
   }
 
-  async convertToProject(id: string) {
+  async convertToProject(id: string, userName: string) {
     const quotation = await this.prisma.quotation.findUnique({
       where: { id },
       include: { client: true, items: true }
@@ -171,7 +186,12 @@ export class QuotationsService {
     // Update quote status
     await this.prisma.quotation.update({
       where: { id },
-      data: { status: 'APPROVED', projectId: project.id }
+      data: { 
+        status: 'APPROVED', 
+        projectId: project.id,
+        approvedBy: userName,
+        approvedAt: new Date()
+      }
     });
 
     return project;

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Delete, Req } from '@nestjs/common';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -11,8 +11,9 @@ export class ContractsController {
 
   @Post()
   @Permissions('CONTRACT_CREATE')
-  create(@Body() createContractDto: any) {
+  create(@Body() createContractDto: any, @Req() req: any) {
     const { projectId, subcontractorId, subcontractorName, items, ...rest } = createContractDto;
+    rest.createdBy = req.user.name;
     
     // Auto-create subcontractor if name is provided
     const subcontractorConn = subcontractorId 
@@ -61,7 +62,8 @@ export class ContractsController {
   // --- Change Orders (ملاحق العقود) ---
   @Post(':id/change-orders')
   @Permissions('CONTRACT_CREATE')
-  createChangeOrder(@Param('id') contractId: string, @Body() changeOrderDto: any) {
+  createChangeOrder(@Param('id') contractId: string, @Body() changeOrderDto: any, @Req() req: any) {
+    changeOrderDto.createdBy = req.user.name;
     return this.contractsService.createChangeOrder(contractId, changeOrderDto);
   }
 }

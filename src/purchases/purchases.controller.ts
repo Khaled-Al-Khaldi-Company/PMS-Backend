@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { PurchasesService } from './purchases.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -11,7 +11,8 @@ export class PurchasesController {
 
   @Post()
   @Permissions('PO_CREATE')
-  create(@Body() createPurchaseDto: any) {
+  create(@Body() createPurchaseDto: any, @Req() req: any) {
+    createPurchaseDto.createdBy = req.user.name;
     return this.purchasesService.create(createPurchaseDto);
   }
 
@@ -33,8 +34,8 @@ export class PurchasesController {
 
   @Patch(':id/approve')
   @Permissions('PO_APPROVE')
-  approveStatus(@Param('id') id: string) {
-    return this.purchasesService.approveStatus(id);
+  approveStatus(@Param('id') id: string, @Req() req: any) {
+    return this.purchasesService.approveStatus(id, req.user.name);
   }
 
   @Delete(':id')
