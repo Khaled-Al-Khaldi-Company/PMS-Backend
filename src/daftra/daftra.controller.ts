@@ -1,6 +1,9 @@
 import { Controller, Post, Get, Param, UseGuards, Body } from '@nestjs/common';
 import { DaftraService } from './daftra.service';
 import { AuthGuard } from '@nestjs/passport';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { Permissions } from '../auth/permissions.decorator';
+
 @Controller('v1/integration/daftra')
 export class DaftraController {
   constructor(private readonly daftraService: DaftraService) {}
@@ -16,8 +19,9 @@ export class DaftraController {
     return this.daftraService.syncCostCenters();
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Post('push-invoice/:invoiceId')
+  @Permissions('INVOICE_APPROVE')
   pushInvoice(@Param('invoiceId') invoiceId: string) {
     return this.daftraService.pushInvoice(invoiceId);
   }

@@ -1,13 +1,16 @@
 import { Controller, Get, Post, Body, Patch, Param, UseGuards, Delete } from '@nestjs/common';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '@nestjs/passport';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { Permissions } from '../auth/permissions.decorator';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @Controller('v1/contracts')
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) {}
 
   @Post()
+  @Permissions('CONTRACT_CREATE')
   create(@Body() createContractDto: any) {
     const { projectId, subcontractorId, subcontractorName, items, ...rest } = createContractDto;
     
@@ -44,17 +47,20 @@ export class ContractsController {
   }
 
   @Patch(':id')
+  @Permissions('CONTRACT_CREATE')
   update(@Param('id') id: string, @Body() updateDto: any) {
     return this.contractsService.update(id, updateDto);
   }
 
   @Delete(':id')
+  @Permissions('CONTRACT_APPROVE')
   remove(@Param('id') id: string) {
     return this.contractsService.remove(id);
   }
 
   // --- Change Orders (ملاحق العقود) ---
   @Post(':id/change-orders')
+  @Permissions('CONTRACT_CREATE')
   createChangeOrder(@Param('id') contractId: string, @Body() changeOrderDto: any) {
     return this.contractsService.createChangeOrder(contractId, changeOrderDto);
   }

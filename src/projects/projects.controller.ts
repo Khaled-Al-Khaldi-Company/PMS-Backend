@@ -29,6 +29,11 @@ export class ProjectsController {
     return this.projectsService.findAll();
   }
 
+  @Get('dashboard/global')
+  getGlobalDashboard() {
+    return this.projectsService.getGlobalDashboard();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.projectsService.findOne(id);

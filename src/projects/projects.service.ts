@@ -143,4 +143,84 @@ export class ProjectsService {
       }))
     };
   }
+
+  async getGlobalDashboard() {
+    const projects = await this.prisma.project.findMany({
+      include: {
+        contracts: true,
+        purchaseOrders: true,
+        invoices: {
+          include: { contract: true }
+        },
+        expenses: true
+      }
+    });
+
+    let totalTargetRevenue = 0;
+    let totalEstimatedBudget = 0;
+    let totalActualRevenue = 0;
+    let totalActualCost = 0;
+
+    let poCostTotal = 0;
+    let subcontractorCostTotal = 0;
+    let expensesCostTotal = 0;
+
+    const projectSummaries = projects.map(project => {
+      const estimatedBudget = project.estimatedBudget || 0;
+      const targetRevenue = project.targetRevenue || project.contracts.filter(c => c.type === 'MAIN_CONTRACT').reduce((sum, c) => sum + c.totalValue, 0);
+
+      const poCost = project.purchaseOrders.filter(po => po.status !== 'CANCELLED').reduce((sum, po) => sum + po.totalAmount, 0);
+      const subcontractorCosts = project.invoices
+        .filter(inv => inv.contract?.type !== 'MAIN_CONTRACT' && inv.status !== 'DRAFT')
+        .reduce((sum, inv) => sum + inv.grossAmount, 0);
+      const expensesCost = project.expenses
+        .filter(e => e.status !== 'REJECTED')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const actualCost = poCost + subcontractorCosts + expensesCost;
+
+      const actualRevenue = project.invoices
+        .filter(inv => inv.contract?.type === 'MAIN_CONTRACT' && inv.status !== 'DRAFT')
+        .reduce((sum, inv) => sum + inv.grossAmount, 0);
+
+      totalTargetRevenue += targetRevenue;
+      totalEstimatedBudget += estimatedBudget;
+      totalActualRevenue += actualRevenue;
+      totalActualCost += actualCost;
+
+      poCostTotal += poCost;
+      subcontractorCostTotal += subcontractorCosts;
+      expensesCostTotal += expensesCost;
+
+      return {
+        id: project.id,
+        name: project.name,
+        code: project.code,
+        status: project.status,
+        targetRevenue,
+        estimatedBudget,
+        actualRevenue,
+        actualCost,
+        profitMargin: actualRevenue > 0 ? ((actualRevenue - actualCost) / actualRevenue) * 100 : (actualCost > 0 ? -100 : 0)
+      };
+    });
+
+    return {
+      overview: {
+        totalProjects: projects.length,
+        totalTargetRevenue,
+        totalEstimatedBudget,
+        totalActualRevenue,
+        totalActualCost,
+        grossProfit: totalActualRevenue - totalActualCost,
+        overallMargin: totalActualRevenue > 0 ? ((totalActualRevenue - totalActualCost) / totalActualRevenue) * 100 : 0
+      },
+      costBreakdown: {
+        materials: poCostTotal,
+        subcontractors: subcontractorCostTotal,
+        expenses: expensesCostTotal
+      },
+      projects: projectSummaries.sort((a, b) => b.actualRevenue - a.actualRevenue)
+    };
+  }
 }
