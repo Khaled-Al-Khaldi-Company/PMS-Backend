@@ -23,7 +23,7 @@ export class ContractsService {
       include: { 
         subcontractor: true, 
         invoices: true,
-        items: true,
+        items: { include: { boqItem: true } },
         changeOrders: { include: { items: true } }, 
         project: { include: { client: true } } 
       }

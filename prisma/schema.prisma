@@ -116,6 +116,7 @@ model Project {
   purchaseOrders PurchaseOrder[] // New Relation for Procurement
   quotation      Quotation?
   expenses       Expense[]
+  dailyReports   DailyReport[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -598,3 +599,56 @@ model QuotationTemplate {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+// =======================
+// DAILY PROGRESS REPORT (DPR)
+// =======================
+
+model DailyReport {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  reportDate  DateTime @default(now())
+  weather     String?  // Sunny, Cloudy, Rainy, Dust Storm
+  temperature Float?   
+  
+  workPerformed String? @db.Text
+  safetyNotes   String? @db.Text
+  
+  status      String   @default("SUBMITTED") // DRAFT, SUBMITTED, APPROVED
+  
+  labors      DailyLabor[]
+  equipments  DailyEquipment[]
+  
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DailyLabor {
+  id          String   @id @default(uuid())
+  reportId    String
+  report      DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  trade       String   // Carpenter, Steel Fixer, Helper, Mason, Engineer
+  count       Int      
+  hours       Float    
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+}
+
+model DailyEquipment {
+  id          String   @id @default(uuid())
+  reportId    String
+  report      DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  equipmentType String // Excavator, Crane, Bobcat, Generator
+  count         Int    
+  hours         Float
+  notes         String?
+
+  createdAt   DateTime @default(now())
+}
+

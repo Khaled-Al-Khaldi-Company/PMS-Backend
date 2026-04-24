@@ -31,6 +31,9 @@ export class ProjectsService {
           include: { subcontractor: true }
         },
         manager: { select: { id: true, firstName: true, lastName: true } },
+        purchaseOrders: true,
+        expenses: true,
+        dailyReports: { include: { labors: true, equipments: true } },
         invoices: {
           select: {
             id: true,

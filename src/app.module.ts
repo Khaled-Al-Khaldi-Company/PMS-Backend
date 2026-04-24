@@ -18,6 +18,7 @@ import { ReportsModule } from './reports/reports.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { QuotationTemplatesModule } from './quotation-templates/quotation-templates.module';
+import { DailyReportsModule } from './daily-reports/daily-reports.module';
 
 @Module({
   imports: [
@@ -37,7 +38,8 @@ import { QuotationTemplatesModule } from './quotation-templates/quotation-templa
     ReportsModule,
     ExpensesModule,
     InventoryModule,
-    QuotationTemplatesModule
+    QuotationTemplatesModule,
+    DailyReportsModule
   ],
   controllers: [AppController],
   providers: [AppService],

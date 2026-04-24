@@ -155,7 +155,7 @@ export class InvoicesService {
       include: { 
         details: { include: { boqItem: true } }, 
         project: { include: { client: true } }, 
-        contract: { include: { subcontractor: true } } 
+        contract: { include: { subcontractor: true, items: { include: { boqItem: true } } } } 
       }
     });
   }
