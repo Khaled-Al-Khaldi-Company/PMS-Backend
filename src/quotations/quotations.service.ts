@@ -211,4 +211,14 @@ export class QuotationsService {
 
     return project;
   }
+  
+  async unlink(id: string) {
+    return this.prisma.quotation.update({
+      where: { id },
+      data: { 
+        projectId: null,
+        status: 'DRAFT'
+      }
+    });
+  }
 }

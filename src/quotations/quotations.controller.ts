@@ -38,6 +38,12 @@ export class QuotationsController {
     return this.quotationsService.convertToProject(id, req.user.name);
   }
 
+  @Post(':id/unlink')
+  @Permissions('QUOTATION_FORCE_DELETE')
+  unlink(@Param('id') id: string) {
+    return this.quotationsService.unlink(id);
+  }
+
   @Delete(':id')
   @Permissions('QUOTATION_APPROVE', 'QUOTATION_FORCE_DELETE')
   remove(@Param('id') id: string, @Req() req: any) {
