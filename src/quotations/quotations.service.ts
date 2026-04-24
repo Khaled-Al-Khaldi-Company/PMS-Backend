@@ -127,8 +127,23 @@ export class QuotationsService {
 
     if (quotation.projectId || quotation.status === 'APPROVED') {
       const userPermissions = reqUser?.permissions || [];
-      if (!userPermissions.includes('QUOTATION_FORCE_DELETE')) {
-        throw new BadRequestException('لا يمكن حذف عرض سعر معتمد أو تحول إلى مشروع.');
+      const canForce = userPermissions.includes('QUOTATION_FORCE_DELETE');
+
+      // If it has a project ID, check if project still exists
+      if (quotation.projectId) {
+        const project = await this.prisma.project.findUnique({ where: { id: quotation.projectId } });
+        if (!project) {
+          // Project was deleted, clear the link and allow proceeding
+          await this.prisma.quotation.update({
+            where: { id },
+            data: { projectId: null }
+          });
+          // Now it's no longer "converted to project"
+        } else if (!canForce) {
+          throw new BadRequestException('لا يمكن حذف عرض سعر مرتبط بمشروع قائم.');
+        }
+      } else if (quotation.status === 'APPROVED' && !canForce) {
+        throw new BadRequestException('لا يمكن حذف عرض سعر معتمد.');
       }
     }
 

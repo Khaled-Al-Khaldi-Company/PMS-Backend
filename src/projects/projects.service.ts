@@ -81,6 +81,15 @@ export class ProjectsService {
       throw new BadRequestException('لا يمكن حذف المشروع لوجود أوامر شراء (Purchase Orders) مرتبطة به.');
     }
 
+    // Revert linked quotation to DRAFT and clear link if it exists
+    await this.prisma.quotation.updateMany({
+      where: { projectId: id },
+      data: {
+        projectId: null,
+        status: 'DRAFT'
+      }
+    });
+
     return this.prisma.project.delete({ where: { id } });
   }
 
