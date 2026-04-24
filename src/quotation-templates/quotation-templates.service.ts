@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -18,6 +18,12 @@ export class QuotationTemplatesService {
   }
 
   async create(data: any) {
+    const existing = await this.prisma.quotationTemplate.findUnique({
+      where: { name: data.name }
+    });
+    if (existing) {
+      throw new BadRequestException('يوجد قالب بنفس هذا الاسم بالفعل. يرجى اختيار اسم مختلف.');
+    }
     return this.prisma.quotationTemplate.create({
       data: {
         name: data.name,
