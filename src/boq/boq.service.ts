@@ -31,7 +31,12 @@ export class BoqService {
   async findByProject(projectId: string): Promise<BOQItem[]> {
     return this.prisma.bOQItem.findMany({
       where: { projectId },
-      include: { contractItems: true, invoiceDetails: true },
+      include: { 
+        contractItems: {
+          include: { contract: true }
+        },
+        invoiceDetails: true 
+      },
       orderBy: { itemCode: 'asc' }
     });
   }
