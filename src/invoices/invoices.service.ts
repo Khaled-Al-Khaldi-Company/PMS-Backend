@@ -124,21 +124,7 @@ export class InvoicesService {
       }
     });
 
-    // 2. Push to Daftra
-    try {
-      await this.daftraService.pushInvoice(invoiceId);
-    } catch (err: any) {
-      // Revert if Daftra fails
-      await this.prisma.invoice.update({
-        where: { id: invoiceId },
-        data: { status: 'DRAFT' }
-      });
-      throw new BadRequestException(err.message);
-    }
-
-    // 3. Re-fetch to get the updated ID for the frontend
-    const finalUpdate = await this.prisma.invoice.findUnique({ where: { id: invoiceId } });
-    return { ...finalUpdate, daftraExternalId: finalUpdate?.daftraInvoiceId };
+    return updated;
   }
 
   async findAllByContract(contractId: string) {

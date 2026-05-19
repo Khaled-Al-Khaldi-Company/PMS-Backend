@@ -50,7 +50,24 @@ export class ContractsController {
   @Patch(':id')
   @Permissions('CONTRACT_CREATE')
   update(@Param('id') id: string, @Body() updateDto: any) {
-    return this.contractsService.update(id, updateDto);
+    const { items, ...rest } = updateDto;
+    
+    if (items) {
+      return this.contractsService.update(id, {
+        ...rest,
+        items: {
+          deleteMany: {},
+          create: items.map((it: any) => ({
+            boqItemId: it.boqItemId,
+            assignedQty: Number(it.assignedQty),
+            unitPrice: Number(it.unitPrice),
+            totalValue: Number(it.assignedQty) * Number(it.unitPrice)
+          }))
+        }
+      });
+    }
+
+    return this.contractsService.update(id, rest);
   }
 
   @Delete(':id')

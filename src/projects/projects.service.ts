@@ -16,6 +16,9 @@ export class ProjectsService {
         manager: {
           select: { id: true, firstName: true, lastName: true },
         },
+        contracts: {
+          where: { type: 'MAIN_CONTRACT' }
+        }
       },
     });
   }
