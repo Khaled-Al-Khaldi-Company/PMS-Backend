@@ -42,7 +42,15 @@ export class InvoicesService {
            invoiceMaxQuantity = cItem.assignedQty; // Subcontractor cannot exceed their assigned qty
         }
 
-        const previousQty = boqItem.executedQty; // Total executed so far globally (for now)
+        const previousDetails = await tx.invoiceDetail.findMany({
+          where: {
+            invoice: {
+              contractId: contractId,
+            },
+            boqItemId: boqItem.id
+          }
+        });
+        const previousQty = previousDetails.reduce((sum, d) => sum + d.currentQty, 0);
         const currentQty = parseFloat(item.currentQty);
         const totalQty = previousQty + currentQty;
 
@@ -62,10 +70,12 @@ export class InvoicesService {
           currentValue
         });
 
-        await tx.bOQItem.update({
-          where: { id: boqItem.id },
-          data: { executedQty: totalQty }
-        });
+        if (contract.type === 'MAIN_CONTRACT') {
+          await tx.bOQItem.update({
+            where: { id: boqItem.id },
+            data: { executedQty: totalQty }
+          });
+        }
       }
 
       // Deductions
@@ -141,7 +151,13 @@ export class InvoicesService {
       include: { 
         details: { include: { boqItem: true } }, 
         project: { include: { client: true } }, 
-        contract: { include: { subcontractor: true, items: { include: { boqItem: true } } } } 
+        contract: { 
+          include: { 
+            subcontractor: true, 
+            items: { include: { boqItem: true } },
+            invoices: { include: { details: true } }
+          } 
+        } 
       }
     });
   }
@@ -155,13 +171,15 @@ export class InvoicesService {
       if (!invoice) throw new BadRequestException('المستخلص غير موجود');
       if (invoice.status !== 'DRAFT') throw new BadRequestException('لا يمكن حذف مستخلص معتمد أو مدفوع.');
 
-      // Revert BOQ Items Execution Qty
-      for (const detail of invoice.details) {
-        if (detail.currentQty && detail.currentQty > 0) {
-          await tx.bOQItem.update({
-            where: { id: detail.boqItemId },
-            data: { executedQty: { decrement: detail.currentQty } }
-          });
+      // Revert BOQ Items Execution Qty (only for MAIN_CONTRACT)
+      if (invoice.contract.type === 'MAIN_CONTRACT') {
+        for (const detail of invoice.details) {
+          if (detail.currentQty && detail.currentQty > 0) {
+            await tx.bOQItem.update({
+              where: { id: detail.boqItemId },
+              data: { executedQty: { decrement: detail.currentQty } }
+            });
+          }
         }
       }
 
@@ -183,12 +201,14 @@ export class InvoicesService {
       const { executionData, taxPercent = 0, advanceDeduction = 0, delayPenalty = 0, otherDeductions = 0, deductionTiming = 'AFTER_VAT', deferDeductions = false } = payload;
       const contract = existingInvoice.contract;
 
-      // 1. Revert existing execution quantities in BOQ items
-      for (const detail of existingInvoice.details) {
-        await tx.bOQItem.update({
-          where: { id: detail.boqItemId },
-          data: { executedQty: { decrement: detail.currentQty } } // revert only the 'currentQty' from this draft
-        });
+      // 1. Revert existing execution quantities in BOQ items (only for MAIN_CONTRACT)
+      if (contract.type === 'MAIN_CONTRACT') {
+        for (const detail of existingInvoice.details) {
+          await tx.bOQItem.update({
+            where: { id: detail.boqItemId },
+            data: { executedQty: { decrement: detail.currentQty } } // revert only the 'currentQty' from this draft
+          });
+        }
       }
 
       // 2. Delete existing details
@@ -219,7 +239,15 @@ export class InvoicesService {
            invoiceMaxQuantity = cItem.assignedQty;
         }
 
-        const previousQty = boqItem.executedQty; // after reversion
+        const previousDetails = await tx.invoiceDetail.findMany({
+          where: {
+            invoice: {
+              contractId: contract.id,
+            },
+            boqItemId: boqItem.id
+          }
+        });
+        const previousQty = previousDetails.reduce((sum, d) => sum + d.currentQty, 0);
         const currentQty = parseFloat(item.currentQty);
         const totalQty = previousQty + currentQty;
 
@@ -239,10 +267,12 @@ export class InvoicesService {
           currentValue
         });
 
-        await tx.bOQItem.update({
-          where: { id: boqItem.id },
-          data: { executedQty: totalQty }
-        });
+        if (contract.type === 'MAIN_CONTRACT') {
+          await tx.bOQItem.update({
+            where: { id: boqItem.id },
+            data: { executedQty: totalQty }
+          });
+        }
       }
 
       // 4. Recalculate Financials

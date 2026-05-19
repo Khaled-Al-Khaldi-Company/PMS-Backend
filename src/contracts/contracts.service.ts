@@ -22,7 +22,7 @@ export class ContractsService {
       where: { id },
       include: { 
         subcontractor: true, 
-        invoices: true,
+        invoices: { include: { details: true } },
         items: { include: { boqItem: true } },
         changeOrders: { include: { items: true } }, 
         project: { include: { client: true } } 
