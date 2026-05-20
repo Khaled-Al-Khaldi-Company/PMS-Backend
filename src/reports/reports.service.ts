@@ -33,6 +33,12 @@ export class ReportsService {
       return this.getSubcontractorsReport(projectFilter, dateFilter);
     } else if (reportType === 'BOQ_PROGRESS') {
       return this.getBoqProgressReport(projectFilter);
+    } else if (reportType === 'CONTRACTS') {
+      return this.getContractsReport(projectFilter);
+    } else if (reportType === 'CONTACTS') {
+      return this.getContactsReport();
+    } else if (reportType === 'ACHIEVEMENT_RECORDS') {
+      return this.getAchievementRecordsReport(projectFilter, dateFilter);
     }
 
     return { data: [], summary: {} };
@@ -152,7 +158,7 @@ export class ReportsService {
       where: { 
         ...projectFilter, 
         ...dateFilter,
-        contract: { type: 'SUBCONTRACTOR' }
+        contract: { type: 'SUBCONTRACT' }
       },
       include: { project: true, contract: { include: { subcontractor: true } } }
     });
@@ -226,6 +232,213 @@ export class ReportsService {
         totalExecutedValue,
         remainingValue: totalPlannedValue - totalExecutedValue,
         overallProgress: totalPlannedValue > 0 ? ((totalExecutedValue / totalPlannedValue) * 100).toFixed(1) : 0
+      }
+    };
+  }
+
+  private async getContractsReport(projectFilter: any) {
+    const contracts = await this.prisma.contract.findMany({
+      where: projectFilter,
+      include: {
+        project: {
+          include: {
+            client: true
+          }
+        },
+        subcontractor: true,
+        invoices: {
+          select: {
+            netAmount: true,
+            paidAmount: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    const rows = contracts.map(c => {
+      const certifiedInvoices = c.invoices.filter(inv => inv.status === 'CERTIFIED' || inv.status === 'PAID');
+      const totalInvoiced = certifiedInvoices.reduce((sum, inv) => sum + Number(inv.netAmount || 0), 0);
+      const totalPaid = certifiedInvoices.reduce((sum, inv) => sum + Number(inv.paidAmount || 0), 0);
+      const remaining = totalInvoiced - totalPaid;
+
+      return {
+        id: c.id,
+        project: c.project?.name,
+        referenceNumber: c.referenceNumber,
+        type: c.type, // MAIN_CONTRACT or SUBCONTRACT
+        partyName: c.type === 'MAIN_CONTRACT' ? (c.project?.client?.name || "المالك") : (c.subcontractor?.name || "مقاول باطن"),
+        totalValue: c.totalValue,
+        retentionPercent: c.retentionPercent,
+        advancePayment: c.advancePayment,
+        totalInvoiced,
+        totalPaid,
+        remaining,
+        createdAt: c.createdAt
+      };
+    });
+
+    const totalMainContractsValue = contracts.filter(c => c.type === 'MAIN_CONTRACT').reduce((sum, c) => sum + c.totalValue, 0);
+    const totalSubcontractsValue = contracts.filter(c => c.type === 'SUBCONTRACT').reduce((sum, c) => sum + c.totalValue, 0);
+
+    return {
+      data: rows,
+      summary: {
+        totalContracts: contracts.length,
+        mainContractsCount: contracts.filter(c => c.type === 'MAIN_CONTRACT').length,
+        subcontractsCount: contracts.filter(c => c.type === 'SUBCONTRACT').length,
+        totalMainContractsValue,
+        totalSubcontractsValue,
+        netContractingVolume: totalMainContractsValue - totalSubcontractsValue
+      }
+    };
+  }
+
+  private async getContactsReport() {
+    const clients = await this.prisma.client.findMany({
+      include: {
+        projects: {
+          include: {
+            contracts: {
+              where: { type: 'MAIN_CONTRACT' }
+            }
+          }
+        }
+      }
+    });
+
+    const suppliers = await this.prisma.supplier.findMany({
+      include: {
+        contracts: true,
+        purchaseOrders: true
+      }
+    });
+
+    const rows: any[] = [];
+    let totalClientVolume = 0;
+    let totalSupplierVolume = 0;
+
+    clients.forEach(c => {
+      let volume = 0;
+      c.projects.forEach(p => {
+        const mainContractsVal = p.contracts.reduce((sum, contract) => sum + contract.totalValue, 0);
+        volume += mainContractsVal > 0 ? mainContractsVal : (p.targetRevenue || 0);
+      });
+
+      totalClientVolume += volume;
+
+      rows.push({
+        id: c.id,
+        name: c.name,
+        commercialName: c.commercialName || '-',
+        contactPerson: c.contactPerson || '-',
+        phone: c.phone || '-',
+        email: c.email || '-',
+        type: 'CLIENT',
+        projectsCount: c.projects.length,
+        contractsCount: c.projects.reduce((acc, p) => acc + p.contracts.length, 0),
+        volume
+      });
+    });
+
+    suppliers.forEach(s => {
+      const contractsVal = s.contracts.reduce((sum, c) => sum + c.totalValue, 0);
+      const poVal = s.purchaseOrders.reduce((sum, po) => sum + po.netAmount, 0);
+      const volume = contractsVal + poVal;
+
+      totalSupplierVolume += volume;
+
+      rows.push({
+        id: s.id,
+        name: s.name,
+        commercialName: s.commercialName || '-',
+        contactPerson: s.contactPerson || '-',
+        phone: s.phone || '-',
+        email: s.email || '-',
+        type: 'SUPPLIER',
+        projectsCount: new Set([...s.contracts.map(c => c.projectId), ...s.purchaseOrders.map(po => po.projectId)]).size,
+        contractsCount: s.contracts.length + s.purchaseOrders.length,
+        volume
+      });
+    });
+
+    rows.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+
+    return {
+      data: rows,
+      summary: {
+        totalContacts: clients.length + suppliers.length,
+        clientsCount: clients.length,
+        suppliersCount: suppliers.length,
+        totalClientVolume,
+        totalSupplierVolume
+      }
+    };
+  }
+
+  private async getAchievementRecordsReport(projectFilter: any, dateFilter: any) {
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        ...projectFilter,
+        ...dateFilter,
+        status: 'CERTIFIED'
+      },
+      include: {
+        project: {
+          include: {
+            client: true
+          }
+        },
+        contract: {
+          include: {
+            subcontractor: true
+          }
+        },
+        details: {
+          include: {
+            boqItem: true
+          }
+        }
+      },
+      orderBy: { approvedAt: 'desc' }
+    });
+
+    const rows = invoices.map(inv => ({
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      project: inv.project?.name,
+      contractType: inv.contract?.type, // MAIN_CONTRACT or SUBCONTRACT
+      partyName: inv.contract?.type === 'MAIN_CONTRACT' ? (inv.project?.client?.name || "المالك") : (inv.contract?.subcontractor?.name || "مقاول باطن"),
+      issueDate: inv.issueDate,
+      approvedBy: inv.approvedBy || '-',
+      approvedAt: inv.approvedAt,
+      grossAmount: inv.grossAmount,
+      taxAmount: inv.taxAmount,
+      retentionAmount: inv.retentionAmount,
+      netAmount: inv.netAmount,
+      details: inv.details.map(d => ({
+        itemCode: d.boqItem?.itemCode || '-',
+        description: d.boqItem?.description || d.id,
+        unit: d.boqItem?.unit || '-',
+        unitPrice: d.unitPrice,
+        previousQty: d.previousQty,
+        currentQty: d.currentQty,
+        totalQty: d.totalQty,
+        currentValue: d.currentValue
+      }))
+    }));
+
+    const totalCertifiedGross = invoices.reduce((sum, inv) => sum + inv.grossAmount, 0);
+    const totalCertifiedNet = invoices.reduce((sum, inv) => sum + inv.netAmount, 0);
+
+    return {
+      data: rows,
+      summary: {
+        totalRecords: invoices.length,
+        totalCertifiedGross,
+        totalCertifiedNet,
+        mainContractsRecordsCount: invoices.filter(inv => inv.contract?.type === 'MAIN_CONTRACT').length,
+        subcontractsRecordsCount: invoices.filter(inv => inv.contract?.type === 'SUBCONTRACT').length
       }
     };
   }
