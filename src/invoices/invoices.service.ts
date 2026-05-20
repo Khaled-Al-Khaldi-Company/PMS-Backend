@@ -22,14 +22,27 @@ export class InvoicesService {
         });
         if (!contract) throw new BadRequestException('Contract not found');
 
+        // 1. Pre-fetch BOQ Items in a single query
+        const boqItemIds = executionData.map((item: any) => item.boqItemId);
+        const boqItems = await tx.bOQItem.findMany({
+          where: { id: { in: boqItemIds } }
+        });
+
+        // 2. Pre-fetch previous invoice details in a single query
+        const previousDetails = await tx.invoiceDetail.findMany({
+          where: {
+            invoice: {
+              contractId: contractId,
+            },
+            boqItemId: { in: boqItemIds }
+          }
+        });
+
         let grossAmount = 0;
         const detailsToCreate = [];
 
         for (const item of executionData) {
-          const boqItem = await tx.bOQItem.findUnique({
-            where: { id: item.boqItemId }
-          });
-
+          const boqItem = boqItems.find(b => b.id === item.boqItemId);
           if (!boqItem) throw new BadRequestException(`BOQ Item ${item.boqItemId} not found`);
 
           let invoiceUnitPrice = boqItem.unitPrice;
@@ -43,15 +56,9 @@ export class InvoicesService {
              invoiceMaxQuantity = cItem.assignedQty; // Subcontractor cannot exceed their assigned qty
           }
 
-          const previousDetails = await tx.invoiceDetail.findMany({
-            where: {
-              invoice: {
-                contractId: contractId,
-              },
-              boqItemId: boqItem.id
-            }
-          });
-          const previousQty = previousDetails.reduce((sum, d) => sum + d.currentQty, 0);
+          // Filter previous details in memory
+          const itemPrevDetails = previousDetails.filter(d => d.boqItemId === boqItem.id);
+          const previousQty = itemPrevDetails.reduce((sum, d) => sum + d.currentQty, 0);
           const currentQty = parseFloat(item.currentQty);
           const totalQty = previousQty + currentQty;
 
@@ -117,6 +124,9 @@ export class InvoicesService {
         });
 
         return invoice;
+      }, {
+        maxWait: 10000,
+        timeout: 45000
       });
     } catch (error: any) {
       console.error("Error in generateMustaqlasa:", error);
@@ -193,6 +203,9 @@ export class InvoicesService {
 
       await tx.invoiceDetail.deleteMany({ where: { invoiceId: id } });
       return tx.invoice.delete({ where: { id } });
+    }, {
+      maxWait: 10000,
+      timeout: 45000
     });
   }
 
@@ -224,16 +237,31 @@ export class InvoicesService {
         where: { invoiceId: id }
       });
 
-      // 3. Process new execution data
+      // 3. Pre-fetch BOQ Items in a single query
+      const boqItemIds = executionData.map((item: any) => item.boqItemId);
+      const boqItems = await tx.bOQItem.findMany({
+        where: { id: { in: boqItemIds } }
+      });
+
+      // 4. Pre-fetch previous invoice details (excluding the current invoice)
+      const previousDetails = await tx.invoiceDetail.findMany({
+        where: {
+          invoice: {
+            contractId: contract.id,
+            id: { not: id }
+          },
+          boqItemId: { in: boqItemIds }
+        }
+      });
+
+      // 5. Process new execution data
       let grossAmount = 0;
       const detailsToCreate = [];
 
       for (const item of executionData) {
         if (!item.currentQty || item.currentQty <= 0) continue;
 
-        const boqItem = await tx.bOQItem.findUnique({
-          where: { id: item.boqItemId }
-        });
+        const boqItem = boqItems.find(b => b.id === item.boqItemId);
         if (!boqItem) throw new BadRequestException(`BOQ Item ${item.boqItemId} not found`);
 
         let invoiceUnitPrice = boqItem.unitPrice;
@@ -247,15 +275,9 @@ export class InvoicesService {
            invoiceMaxQuantity = cItem.assignedQty;
         }
 
-        const previousDetails = await tx.invoiceDetail.findMany({
-          where: {
-            invoice: {
-              contractId: contract.id,
-            },
-            boqItemId: boqItem.id
-          }
-        });
-        const previousQty = previousDetails.reduce((sum, d) => sum + d.currentQty, 0);
+        // Filter previous details in memory
+        const itemPrevDetails = previousDetails.filter(d => d.boqItemId === boqItem.id);
+        const previousQty = itemPrevDetails.reduce((sum, d) => sum + d.currentQty, 0);
         const currentQty = parseFloat(item.currentQty);
         const totalQty = previousQty + currentQty;
 
@@ -283,14 +305,14 @@ export class InvoicesService {
         }
       }
 
-      // 4. Recalculate Financials
+      // 6. Recalculate Financials
       const retentionAmount = grossAmount * (contract.retentionPercent / 100.0);
       const totalDeductions = retentionAmount + Number(advanceDeduction) + Number(delayPenalty) + Number(otherDeductions);
       const taxableAmount = grossAmount - retentionAmount - Number(advanceDeduction) - Number(delayPenalty) - Number(otherDeductions);
       const taxAmount = Math.max(0, taxableAmount * (Number(taxPercent) / 100.0));
       const netAmount = grossAmount - totalDeductions + taxAmount;
 
-      // 5. Update Invoice
+      // 7. Update Invoice
       const updatedInvoice = await tx.invoice.update({
         where: { id },
         data: {
@@ -312,6 +334,9 @@ export class InvoicesService {
       });
 
       return updatedInvoice;
+    }, {
+      maxWait: 10000,
+      timeout: 45000
     });
   }
 }
