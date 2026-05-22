@@ -155,6 +155,25 @@ export class InvoicesService {
     return updated;
   }
 
+  async revertToDraft(invoiceId: string) {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId }
+    });
+    if (!invoice) throw new BadRequestException('المستخلص غير موجود');
+    if (invoice.status === 'PAID') throw new BadRequestException('لا يمكن إرجاع مستخلص تم دفعه إلى مسودة.');
+    if (invoice.status === 'DRAFT') throw new BadRequestException('المستخلص بالفعل في حالة مسودة.');
+
+    const updated = await this.prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        status: 'DRAFT',
+        approvedBy: null,
+        approvedAt: null,
+      }
+    });
+    return updated;
+  }
+
   async findAllByContract(contractId: string) {
     return this.prisma.invoice.findMany({
       where: { contractId },

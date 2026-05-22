@@ -44,6 +44,12 @@ export class InvoicesController {
     return this.invoicesService.certifyInvoice(id, req.user.name);
   }
 
+  @Patch(':id/revert-to-draft')
+  @Permissions('INVOICE_REVIEW', 'INVOICE_APPROVE')
+  revertToDraft(@Param('id') id: string) {
+    return this.invoicesService.revertToDraft(id);
+  }
+
   @Post(':id/sync-payment')
   @Permissions('INVOICE_APPROVE')
   syncPaymentStatus(@Param('id') id: string) {

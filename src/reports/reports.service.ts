@@ -35,10 +35,22 @@ export class ReportsService {
       return this.getBoqProgressReport(projectFilter);
     } else if (reportType === 'CONTRACTS') {
       return this.getContractsReport(projectFilter);
+    } else if (reportType === 'CLIENT_CONTRACTS') {
+      return this.getContractsReport(projectFilter, 'MAIN_CONTRACT');
+    } else if (reportType === 'SUBCONTRACTOR_CONTRACTS') {
+      return this.getContractsReport(projectFilter, 'SUBCONTRACT');
     } else if (reportType === 'CONTACTS') {
       return this.getContactsReport();
+    } else if (reportType === 'CLIENT_CONTACTS') {
+      return this.getContactsReport('CLIENT');
+    } else if (reportType === 'SUPPLIER_CONTACTS') {
+      return this.getContactsReport('SUPPLIER');
     } else if (reportType === 'ACHIEVEMENT_RECORDS') {
       return this.getAchievementRecordsReport(projectFilter, dateFilter);
+    } else if (reportType === 'CLIENT_ACHIEVEMENT_RECORDS') {
+      return this.getAchievementRecordsReport(projectFilter, dateFilter, 'MAIN_CONTRACT');
+    } else if (reportType === 'SUBCONTRACTOR_ACHIEVEMENT_RECORDS') {
+      return this.getAchievementRecordsReport(projectFilter, dateFilter, 'SUBCONTRACT');
     }
 
     return { data: [], summary: {} };
@@ -236,9 +248,10 @@ export class ReportsService {
     };
   }
 
-  private async getContractsReport(projectFilter: any) {
+  private async getContractsReport(projectFilter: any, type?: 'MAIN_CONTRACT' | 'SUBCONTRACT') {
+    const whereClause = type ? { ...projectFilter, type } : projectFilter;
     const contracts = await this.prisma.contract.findMany({
-      where: projectFilter,
+      where: whereClause,
       include: {
         project: {
           include: {
@@ -278,6 +291,11 @@ export class ReportsService {
       };
     });
 
+    const totalValue = contracts.reduce((sum, c) => sum + c.totalValue, 0);
+    const totalInvoiced = rows.reduce((sum, r) => sum + r.totalInvoiced, 0);
+    const totalPaid = rows.reduce((sum, r) => sum + r.totalPaid, 0);
+    const remaining = rows.reduce((sum, r) => sum + r.remaining, 0);
+
     const totalMainContractsValue = contracts.filter(c => c.type === 'MAIN_CONTRACT').reduce((sum, c) => sum + c.totalValue, 0);
     const totalSubcontractsValue = contracts.filter(c => c.type === 'SUBCONTRACT').reduce((sum, c) => sum + c.totalValue, 0);
 
@@ -289,13 +307,18 @@ export class ReportsService {
         subcontractsCount: contracts.filter(c => c.type === 'SUBCONTRACT').length,
         totalMainContractsValue,
         totalSubcontractsValue,
-        netContractingVolume: totalMainContractsValue - totalSubcontractsValue
+        netContractingVolume: totalMainContractsValue - totalSubcontractsValue,
+        // Added fields for split reports
+        totalValue,
+        totalInvoiced,
+        totalPaid,
+        remaining
       }
     };
   }
 
-  private async getContactsReport() {
-    const clients = await this.prisma.client.findMany({
+  private async getContactsReport(contactType?: 'CLIENT' | 'SUPPLIER') {
+    const clients = (!contactType || contactType === 'CLIENT') ? await this.prisma.client.findMany({
       include: {
         projects: {
           include: {
@@ -305,14 +328,14 @@ export class ReportsService {
           }
         }
       }
-    });
+    }) : [];
 
-    const suppliers = await this.prisma.supplier.findMany({
+    const suppliers = (!contactType || contactType === 'SUPPLIER') ? await this.prisma.supplier.findMany({
       include: {
         contracts: true,
         purchaseOrders: true
       }
-    });
+    }) : [];
 
     const rows: any[] = [];
     let totalClientVolume = 0;
@@ -376,12 +399,14 @@ export class ReportsService {
     };
   }
 
-  private async getAchievementRecordsReport(projectFilter: any, dateFilter: any) {
+  private async getAchievementRecordsReport(projectFilter: any, dateFilter: any, contractType?: 'MAIN_CONTRACT' | 'SUBCONTRACT') {
+    const contractFilter = contractType ? { contract: { type: contractType } } : {};
     const invoices = await this.prisma.invoice.findMany({
       where: {
         ...projectFilter,
         ...dateFilter,
-        status: 'CERTIFIED'
+        status: 'CERTIFIED',
+        ...contractFilter
       },
       include: {
         project: {
