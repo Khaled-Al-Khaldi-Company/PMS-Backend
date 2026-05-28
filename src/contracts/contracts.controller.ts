@@ -3,6 +3,7 @@ import { ContractsService } from './contracts.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
+import { CreateContractDto } from './dto/create-contract.dto';
 
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @Controller('v1/contracts')
@@ -11,11 +12,9 @@ export class ContractsController {
 
   @Post()
   @Permissions('CONTRACT_CREATE')
-  create(@Body() createContractDto: any, @Req() req: any) {
+  create(@Body() createContractDto: CreateContractDto, @Req() req: { user: { name: string } }) {
     const { projectId, subcontractorId, subcontractorName, items, ...rest } = createContractDto;
-    rest.createdBy = req.user.name;
     
-    // Auto-create subcontractor if name is provided
     const subcontractorConn = subcontractorId 
       ? { connect: { id: subcontractorId } } 
       : subcontractorName 
@@ -24,10 +23,11 @@ export class ContractsController {
 
     return this.contractsService.create({
       ...rest,
+      createdBy: req.user.name,
       project: { connect: { id: projectId } },
       subcontractor: subcontractorConn,
       items: items && items.length > 0 ? {
-        create: items.map((it: any) => ({
+        create: items.map((it) => ({
           boqItemId: it.boqItemId,
           assignedQty: Number(it.assignedQty),
           unitPrice: Number(it.unitPrice),

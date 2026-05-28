@@ -3,6 +3,7 @@ import { QuotationsService } from './quotations.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
+import { CreateQuotationDto } from './dto/create-quotation.dto';
 
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @Controller('v1/quotations')
@@ -11,9 +12,8 @@ export class QuotationsController {
 
   @Post()
   @Permissions('QUOTATION_CREATE')
-  create(@Body() createQuotationDto: any, @Req() req: any) {
-    createQuotationDto.createdBy = req.user.name;
-    return this.quotationsService.create(createQuotationDto);
+  create(@Body() createQuotationDto: CreateQuotationDto, @Req() req: { user: { name: string } }) {
+    return this.quotationsService.create({ ...createQuotationDto, createdBy: req.user.name });
   }
 
   @Get()
