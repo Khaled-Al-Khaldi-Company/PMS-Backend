@@ -3,6 +3,7 @@ import { PurchasesService } from './purchases.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
+import { CreatePurchaseDto } from './dto/create-purchase.dto';
 
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @Controller('v1/purchases')
@@ -11,9 +12,8 @@ export class PurchasesController {
 
   @Post()
   @Permissions('PO_CREATE')
-  create(@Body() createPurchaseDto: any, @Req() req: any) {
-    createPurchaseDto.createdBy = req.user.name;
-    return this.purchasesService.create(createPurchaseDto);
+  create(@Body() createPurchaseDto: CreatePurchaseDto, @Req() req: { user: { name: string } }) {
+    return this.purchasesService.create({ ...createPurchaseDto, createdBy: req.user.name });
   }
 
   @Get()

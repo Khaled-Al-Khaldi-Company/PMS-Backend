@@ -3,6 +3,7 @@ import { InvoicesService } from './invoices.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissions } from '../auth/permissions.decorator';
+import { GenerateInvoiceDto } from './dto/generate-invoice.dto';
 
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @Controller('v1/invoices')
@@ -17,9 +18,8 @@ export class InvoicesController {
 
   @Post(':contractId/generate')
   @Permissions('INVOICE_CREATE')
-  generateMustaqlasa(@Param('contractId') contractId: string, @Body() payload: any, @Req() req: any) {
-    payload.createdBy = req.user.name;
-    return this.invoicesService.generateMustaqlasa(contractId, payload);
+  generateMustaqlasa(@Param('contractId') contractId: string, @Body() payload: GenerateInvoiceDto, @Req() req: { user: { name: string } }) {
+    return this.invoicesService.generateMustaqlasa(contractId, { ...payload, createdBy: req.user.name });
   }
 
   @Put(':id')
