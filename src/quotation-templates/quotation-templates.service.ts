@@ -19,10 +19,12 @@ export class QuotationTemplatesService {
 
   async create(data: any) {
     const existing = await this.prisma.quotationTemplate.findUnique({
-      where: { name: data.name }
+      where: { name: data.name },
     });
     if (existing) {
-      throw new BadRequestException('يوجد قالب بنفس هذا الاسم بالفعل. يرجى اختيار اسم مختلف.');
+      throw new BadRequestException(
+        'يوجد قالب بنفس هذا الاسم بالفعل. يرجى اختيار اسم مختلف.',
+      );
     }
     return this.prisma.quotationTemplate.create({
       data: {

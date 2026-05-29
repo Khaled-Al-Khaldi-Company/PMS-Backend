@@ -7,6 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [DailyReportsController],
   providers: [DailyReportsService],
-  exports: [DailyReportsService]
+  exports: [DailyReportsService],
 })
 export class DailyReportsModule {}

@@ -8,10 +8,10 @@ export class ContactsService {
   // -------------------------
   // SUPPLIERS
   // -------------------------
-  
+
   async getSuppliers() {
     return this.prisma.supplier.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -22,13 +22,13 @@ export class ContactsService {
   async updateSupplier(id: string, data: any) {
     return this.prisma.supplier.update({
       where: { id },
-      data
+      data,
     });
   }
 
   async deleteSupplier(id: string) {
     return this.prisma.supplier.delete({
-      where: { id }
+      where: { id },
     });
   }
 
@@ -38,7 +38,7 @@ export class ContactsService {
 
   async getClients() {
     return this.prisma.client.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -49,13 +49,13 @@ export class ContactsService {
   async updateClient(id: string, data: any) {
     return this.prisma.client.update({
       where: { id },
-      data
+      data,
     });
   }
 
   async deleteClient(id: string) {
     return this.prisma.client.delete({
-      where: { id }
+      where: { id },
     });
   }
 }

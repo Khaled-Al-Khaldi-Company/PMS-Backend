@@ -1,11 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { QuotationTemplatesService } from './quotation-templates.service';
 import { AuthGuard } from '@nestjs/passport';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('v1/quotation-templates')
 export class QuotationTemplatesController {
-  constructor(private readonly quotationTemplatesService: QuotationTemplatesService) {}
+  constructor(
+    private readonly quotationTemplatesService: QuotationTemplatesService,
+  ) {}
 
   @Get()
   findAll() {

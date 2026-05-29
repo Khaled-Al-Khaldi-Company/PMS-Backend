@@ -77,7 +77,10 @@ export class DaftraController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('link-project/:id')
-  linkProject(@Param('id') id: string, @Body('daftraCostCenterId') daftraCostCenterId: string) {
+  linkProject(
+    @Param('id') id: string,
+    @Body('daftraCostCenterId') daftraCostCenterId: string,
+  ) {
     return this.daftraService.linkProject(id, daftraCostCenterId);
   }
 

@@ -10,6 +10,7 @@ async function main() {
     { name: 'Accountant', description: 'محاسب مالي (Finance)' },
     { name: 'Engineer', description: 'متخصص مكتب فني / مهندس موقع' },
     { name: 'Procurement', description: 'مسؤول المشتريات والتعاقدات' },
+    { name: 'Viewer', description: 'عرض فقط (Viewer)' },
   ];
 
   let adminRole = null;
@@ -81,6 +82,22 @@ async function main() {
         lastName: 'User',
         passwordHash,
         roleId: adminRole.id,
+      },
+    });
+  }
+
+  // Create Viewer User
+  const viewerRole = await prisma.role.findUnique({ where: { name: 'Viewer' } });
+  if (viewerRole) {
+    await prisma.user.upsert({
+      where: { email: 'viewer@system.com' },
+      update: {},
+      create: {
+        email: 'viewer@system.com',
+        firstName: 'زائر',
+        lastName: 'عرض فقط',
+        passwordHash,
+        roleId: viewerRole.id,
       },
     });
   }

@@ -8,13 +8,13 @@ export class SettingsService {
   async getSettings() {
     const settings = await this.prisma.systemSetting.findMany();
     const result: Record<string, string> = {};
-    settings.forEach(s => result[s.key] = s.value);
+    settings.forEach((s) => (result[s.key] = s.value));
     return result;
   }
 
   async getSetting(key: string): Promise<string | null> {
     const setting = await this.prisma.systemSetting.findUnique({
-      where: { key }
+      where: { key },
     });
     return setting?.value || null;
   }
@@ -31,18 +31,22 @@ export class SettingsService {
   }
 
   async getCompanyProfile() {
-    let profile = await this.prisma.companyProfile.findUnique({ where: { id: "1" } });
+    let profile = await this.prisma.companyProfile.findUnique({
+      where: { id: '1' },
+    });
     if (!profile) {
-      profile = await this.prisma.companyProfile.create({ data: { id: "1", nameAr: "المقاول الجديد" } });
+      profile = await this.prisma.companyProfile.create({
+        data: { id: '1', nameAr: 'المقاول الجديد' },
+      });
     }
     return profile;
   }
 
   async updateCompanyProfile(data: any) {
     return this.prisma.companyProfile.upsert({
-      where: { id: "1" },
+      where: { id: '1' },
       update: data,
-      create: { id: "1", ...data },
+      create: { id: '1', ...data },
     });
   }
 
@@ -76,7 +80,8 @@ export class SettingsService {
 
     return {
       success: true,
-      message: 'تم تصفير جميع البيانات التشغيلية بنجاح. المستخدمون والإعدادات محفوظة.',
+      message:
+        'تم تصفير جميع البيانات التشغيلية بنجاح. المستخدمون والإعدادات محفوظة.',
     };
   }
 }

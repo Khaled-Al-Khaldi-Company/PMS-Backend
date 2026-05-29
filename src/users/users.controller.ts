@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -23,8 +31,14 @@ export class UsersController {
   }
 
   @Patch('roles/:id/permissions')
-  updateRolePermissions(@Param('id') roleId: string, @Body() body: { permissionNames: string[] }) {
-    return this.usersService.updateRolePermissions(roleId, body.permissionNames);
+  updateRolePermissions(
+    @Param('id') roleId: string,
+    @Body() body: { permissionNames: string[] },
+  ) {
+    return this.usersService.updateRolePermissions(
+      roleId,
+      body.permissionNames,
+    );
   }
 
   @Post()

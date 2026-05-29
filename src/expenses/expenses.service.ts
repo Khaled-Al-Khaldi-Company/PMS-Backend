@@ -6,30 +6,32 @@ export class ExpensesService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: any) {
-    const count = await this.prisma.expense.count() + 1;
+    const count = (await this.prisma.expense.count()) + 1;
     const expenseNo = `EXP-${new Date().getFullYear()}-${count.toString().padStart(3, '0')}`;
-    
+
     // Convert amount to number safely
     const amount = Number(data.amount) || 0;
-    
+
     const { projectId, ...rest } = data;
-    const projectConn = projectId ? { project: { connect: { id: projectId } } } : {};
+    const projectConn = projectId
+      ? { project: { connect: { id: projectId } } }
+      : {};
 
     return this.prisma.expense.create({
       data: {
         ...rest,
         expenseNo,
         amount,
-        ...projectConn
+        ...projectConn,
       },
-      include: { project: true }
+      include: { project: true },
     });
   }
 
   async findAll() {
     return this.prisma.expense.findMany({
       include: { project: true },
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
     });
   }
 
@@ -37,4 +39,3 @@ export class ExpensesService {
     return this.prisma.expense.delete({ where: { id } });
   }
 }
-

@@ -6,8 +6,17 @@ export class DailyReportsService {
   constructor(private prisma: PrismaService) {}
 
   async create(projectId: string, data: any) {
-    const { reportDate, weather, temperature, workPerformed, safetyNotes, labors, equipments, createdBy } = data;
-    
+    const {
+      reportDate,
+      weather,
+      temperature,
+      workPerformed,
+      safetyNotes,
+      labors,
+      equipments,
+      createdBy,
+    } = data;
+
     return this.prisma.dailyReport.create({
       data: {
         projectId,
@@ -18,23 +27,25 @@ export class DailyReportsService {
         safetyNotes,
         createdBy,
         labors: {
-          create: labors?.map((l: any) => ({
-            trade: l.trade,
-            count: parseInt(l.count),
-            hours: parseFloat(l.hours),
-            notes: l.notes
-          })) || []
+          create:
+            labors?.map((l: any) => ({
+              trade: l.trade,
+              count: parseInt(l.count),
+              hours: parseFloat(l.hours),
+              notes: l.notes,
+            })) || [],
         },
         equipments: {
-          create: equipments?.map((e: any) => ({
-            equipmentType: e.equipmentType,
-            count: parseInt(e.count),
-            hours: parseFloat(e.hours),
-            notes: e.notes
-          })) || []
-        }
+          create:
+            equipments?.map((e: any) => ({
+              equipmentType: e.equipmentType,
+              count: parseInt(e.count),
+              hours: parseFloat(e.hours),
+              notes: e.notes,
+            })) || [],
+        },
       },
-      include: { labors: true, equipments: true }
+      include: { labors: true, equipments: true },
     });
   }
 
@@ -42,18 +53,18 @@ export class DailyReportsService {
     return this.prisma.dailyReport.findMany({
       where: { projectId },
       include: { labors: true, equipments: true },
-      orderBy: { reportDate: 'desc' }
+      orderBy: { reportDate: 'desc' },
     });
   }
 
   async findOne(id: string) {
     const report = await this.prisma.dailyReport.findUnique({
       where: { id },
-      include: { 
-        labors: true, 
+      include: {
+        labors: true,
         equipments: true,
-        project: { select: { name: true, code: true } }
-      }
+        project: { select: { name: true, code: true } },
+      },
     });
     if (!report) throw new NotFoundException('Daily report not found');
     return report;
@@ -61,7 +72,7 @@ export class DailyReportsService {
 
   async delete(id: string) {
     return this.prisma.dailyReport.delete({
-      where: { id }
+      where: { id },
     });
   }
 }

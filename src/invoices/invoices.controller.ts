@@ -1,4 +1,15 @@
-import { Controller, Post, Body, Param, Get, Patch, Put, Delete, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Param,
+  Get,
+  Patch,
+  Put,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -17,7 +28,11 @@ export class InvoicesController {
 
   @Post(':contractId/generate')
   @Permissions('INVOICE_CREATE')
-  generateMustaqlasa(@Param('contractId') contractId: string, @Body() payload: any, @Req() req: any) {
+  generateMustaqlasa(
+    @Param('contractId') contractId: string,
+    @Body() payload: any,
+    @Req() req: any,
+  ) {
     payload.createdBy = req.user.name;
     return this.invoicesService.generateMustaqlasa(contractId, payload);
   }

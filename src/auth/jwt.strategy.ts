@@ -15,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     const user = await this.usersService.findByEmail(payload.email);
-    if (!user || (!user.isActive)) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('User is inactive or not found');
     }
     // Return user with role and permissions injected into Request
@@ -24,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
       role: user.role.name,
-      permissions: user.role.permissions.map((p: any) => p.name)
+      permissions: user.role.permissions.map((p: any) => p.name),
     };
   }
 }

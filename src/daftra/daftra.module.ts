@@ -8,6 +8,6 @@ import { SettingsModule } from '../settings/settings.module';
   imports: [PrismaModule, SettingsModule],
   controllers: [DaftraController],
   providers: [DaftraService],
-  exports: [DaftraService]
+  exports: [DaftraService],
 })
 export class DaftraModule {}

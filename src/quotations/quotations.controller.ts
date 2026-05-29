@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { QuotationsService } from './quotations.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -28,7 +38,11 @@ export class QuotationsController {
 
   @Patch(':id')
   @Permissions('QUOTATION_CREATE', 'QUOTATION_APPROVE', 'QUOTATION_FORCE_EDIT')
-  update(@Param('id') id: string, @Body() updateQuotationDto: any, @Req() req: any) {
+  update(
+    @Param('id') id: string,
+    @Body() updateQuotationDto: any,
+    @Req() req: any,
+  ) {
     return this.quotationsService.update(id, updateQuotationDto, req.user);
   }
 
@@ -45,7 +59,11 @@ export class QuotationsController {
   }
 
   @Delete(':id')
-  @Permissions('QUOTATION_APPROVE', 'QUOTATION_FORCE_DELETE')
+  @Permissions(
+    'QUOTATION_CREATE',
+    'QUOTATION_APPROVE',
+    'QUOTATION_FORCE_DELETE',
+  )
   remove(@Param('id') id: string, @Req() req: any) {
     return this.quotationsService.remove(id, req.user);
   }

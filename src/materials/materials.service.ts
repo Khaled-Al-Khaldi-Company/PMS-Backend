@@ -7,11 +7,16 @@ export class MaterialsService {
 
   async findAll() {
     return this.prisma.material.findMany({
-      orderBy: { name: 'asc' }
+      orderBy: { name: 'asc' },
     });
   }
 
-  async create(data: { name: string; code: string; unit: string; type?: string }) {
+  async create(data: {
+    name: string;
+    code: string;
+    unit: string;
+    type?: string;
+  }) {
     return this.prisma.material.create({ data });
   }
 }

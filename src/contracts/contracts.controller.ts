@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Delete, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Delete,
+  Req,
+} from '@nestjs/common';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -12,13 +22,14 @@ export class ContractsController {
   @Post()
   @Permissions('CONTRACT_CREATE')
   create(@Body() createContractDto: any, @Req() req: any) {
-    const { projectId, subcontractorId, subcontractorName, items, ...rest } = createContractDto;
+    const { projectId, subcontractorId, subcontractorName, items, ...rest } =
+      createContractDto;
     rest.createdBy = req.user.name;
-    
+
     // Auto-create subcontractor if name is provided
-    const subcontractorConn = subcontractorId 
-      ? { connect: { id: subcontractorId } } 
-      : subcontractorName 
+    const subcontractorConn = subcontractorId
+      ? { connect: { id: subcontractorId } }
+      : subcontractorName
         ? { create: { name: subcontractorName } }
         : undefined;
 
@@ -26,14 +37,17 @@ export class ContractsController {
       ...rest,
       project: { connect: { id: projectId } },
       subcontractor: subcontractorConn,
-      items: items && items.length > 0 ? {
-        create: items.map((it: any) => ({
-          boqItemId: it.boqItemId,
-          assignedQty: Number(it.assignedQty),
-          unitPrice: Number(it.unitPrice),
-          totalValue: Number(it.assignedQty) * Number(it.unitPrice)
-        }))
-      } : undefined
+      items:
+        items && items.length > 0
+          ? {
+              create: items.map((it: any) => ({
+                boqItemId: it.boqItemId,
+                assignedQty: Number(it.assignedQty),
+                unitPrice: Number(it.unitPrice),
+                totalValue: Number(it.assignedQty) * Number(it.unitPrice),
+              })),
+            }
+          : undefined,
     });
   }
 
@@ -50,24 +64,11 @@ export class ContractsController {
   @Patch(':id')
   @Permissions('CONTRACT_CREATE')
   update(@Param('id') id: string, @Body() updateDto: any) {
-    const { items, ...rest } = updateDto;
-    
-    if (items) {
-      return this.contractsService.update(id, {
-        ...rest,
-        items: {
-          deleteMany: {},
-          create: items.map((it: any) => ({
-            boqItemId: it.boqItemId,
-            assignedQty: Number(it.assignedQty),
-            unitPrice: Number(it.unitPrice),
-            totalValue: Number(it.assignedQty) * Number(it.unitPrice)
-          }))
-        }
-      });
-    }
-
-    return this.contractsService.update(id, rest);
+    const { items, scope, projectId, type, ...rest } = updateDto;
+    void scope;
+    void projectId;
+    void type;
+    return this.contractsService.update(id, rest, items);
   }
 
   @Delete(':id')
@@ -79,7 +80,11 @@ export class ContractsController {
   // --- Change Orders (ملاحق العقود) ---
   @Post(':id/change-orders')
   @Permissions('CONTRACT_CREATE')
-  createChangeOrder(@Param('id') contractId: string, @Body() changeOrderDto: any, @Req() req: any) {
+  createChangeOrder(
+    @Param('id') contractId: string,
+    @Body() changeOrderDto: any,
+    @Req() req: any,
+  ) {
     changeOrderDto.createdBy = req.user.name;
     return this.contractsService.createChangeOrder(contractId, changeOrderDto);
   }

@@ -15,17 +15,17 @@ export class InventoryService {
       data: {
         name,
         location: location || null,
-        ...(projectId && projectId !== '' ? { projectId } : {})
-      }
+        ...(projectId && projectId !== '' ? { projectId } : {}),
+      },
     });
   }
 
   async findAllWarehouses() {
     return this.prisma.warehouse.findMany({
       include: {
-        project: { select: { id: true, name: true, code: true } }
+        project: { select: { id: true, name: true, code: true } },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -36,54 +36,61 @@ export class InventoryService {
     return this.prisma.inventoryStock.findMany({
       where: { warehouseId },
       include: {
-        material: true
-      }
+        material: true,
+      },
     });
   }
 
   // =====================
   // TRANSACTIONS
   // =====================
-  
+
   // RECEIPT (IN)
   async recordReceipt(data: any) {
-    const { warehouseId, materialId, quantity, poId, remarks, createdBy } = data;
-    
+    const { warehouseId, materialId, quantity, poId, remarks, createdBy } =
+      data;
+
     // ✅ التحقق من عدم تجاوز كمية أمر الشراء
     if (poId) {
       const po = await this.prisma.purchaseOrder.findUnique({
         where: { id: poId },
-        include: { items: true }
+        include: { items: true },
       });
 
       if (!po) throw new BadRequestException('أمر الشراء غير موجود.');
       if (po.status === 'COMPLETED') {
-        throw new BadRequestException('أمر الشراء هذا مكتمل ومستلم بالكامل مسبقاً، لا يمكن الاستلام عليه مرة أخرى.');
+        throw new BadRequestException(
+          'أمر الشراء هذا مكتمل ومستلم بالكامل مسبقاً، لا يمكن الاستلام عليه مرة أخرى.',
+        );
       }
 
-      const poItem = po.items.find(item => item.materialId === materialId);
+      const poItem = po.items.find((item) => item.materialId === materialId);
 
       if (!poItem) {
-        throw new BadRequestException('هذه المادة غير موجودة في أمر الشراء المحدد.');
+        throw new BadRequestException(
+          'هذه المادة غير موجودة في أمر الشراء المحدد.',
+        );
       }
 
       // حساب الكمية المستلمة مسبقاً لنفس المادة على نفس الـ PO
       const alreadyReceived = await this.prisma.materialTransaction.aggregate({
         where: { poId, materialId, type: 'RECEIPT' },
-        _sum: { quantity: true }
+        _sum: { quantity: true },
       });
       const receivedSoFar = Number(alreadyReceived._sum.quantity ?? 0);
       const remainingQty = poItem.quantity - receivedSoFar;
 
       if (quantity > remainingQty) {
         throw new BadRequestException(
-          `لا يمكن استلام ${quantity} وحدة. الكمية المطلوبة في الـ PO: ${poItem.quantity}، المستلم مسبقاً: ${receivedSoFar}، المتبقي: ${remainingQty}.`
+          `لا يمكن استلام ${quantity} وحدة. الكمية المطلوبة في الـ PO: ${poItem.quantity}، المستلم مسبقاً: ${receivedSoFar}، المتبقي: ${remainingQty}.`,
         );
       }
     }
 
     // 1. Generate Ref Number
-    const count = await this.prisma.materialTransaction.count({ where: { type: 'RECEIPT' } });
+    const count = await this.prisma.materialTransaction.count({
+      where: { type: 'RECEIPT' },
+    });
     const referenceNo = `GRN-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
 
     // Transaction to ensure atomicity
@@ -98,29 +105,31 @@ export class InventoryService {
           quantity: Math.abs(quantity),
           poId,
           remarks,
-          createdBy
-        }
+          createdBy,
+        },
       });
 
       // 2. Update Stock
       await tx.inventoryStock.upsert({
         where: { warehouseId_materialId: { warehouseId, materialId } },
         update: { quantity: { increment: Math.abs(quantity) } },
-        create: { warehouseId, materialId, quantity: Math.abs(quantity) }
+        create: { warehouseId, materialId, quantity: Math.abs(quantity) },
       });
 
       // 3. ✅ Check if the entire PO is now COMPLETED
       if (poId) {
-        const poItems = await tx.purchaseOrderItem.findMany({ where: { purchaseOrderId: poId } });
+        const poItems = await tx.purchaseOrderItem.findMany({
+          where: { purchaseOrderId: poId },
+        });
         let allCompleted = true;
 
         for (const item of poItems) {
           const itemReceived = await tx.materialTransaction.aggregate({
             where: { poId, materialId: item.materialId, type: 'RECEIPT' },
-            _sum: { quantity: true }
+            _sum: { quantity: true },
           });
           const totalReceivedForItem = Number(itemReceived._sum.quantity ?? 0);
-          
+
           if (totalReceivedForItem < item.quantity) {
             allCompleted = false;
             break;
@@ -130,7 +139,7 @@ export class InventoryService {
         if (allCompleted) {
           await tx.purchaseOrder.update({
             where: { id: poId },
-            data: { status: 'COMPLETED' }
+            data: { status: 'COMPLETED' },
           });
         }
       }
@@ -141,18 +150,23 @@ export class InventoryService {
 
   // ISSUE (OUT)
   async recordIssue(data: any) {
-    const { warehouseId, materialId, quantity, boqItemId, remarks, createdBy } = data;
-    
+    const { warehouseId, materialId, quantity, boqItemId, remarks, createdBy } =
+      data;
+
     // Check Stock First
     const stock = await this.prisma.inventoryStock.findUnique({
-      where: { warehouseId_materialId: { warehouseId, materialId } }
+      where: { warehouseId_materialId: { warehouseId, materialId } },
     });
 
     if (!stock || stock.quantity < quantity) {
-      throw new BadRequestException('رصيد المادة في هذا المستودع غير كافٍ لصرف هذه الكمية.');
+      throw new BadRequestException(
+        'رصيد المادة في هذا المستودع غير كافٍ لصرف هذه الكمية.',
+      );
     }
 
-    const count = await this.prisma.materialTransaction.count({ where: { type: 'ISSUE' } });
+    const count = await this.prisma.materialTransaction.count({
+      where: { type: 'ISSUE' },
+    });
     const referenceNo = `MIS-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
 
     return this.prisma.$transaction(async (tx) => {
@@ -166,14 +180,14 @@ export class InventoryService {
           quantity: -Math.abs(quantity), // Ensure negative for OUT (or record as positive and use type, but negative is easy for sum)
           boqItemId,
           remarks,
-          createdBy
-        }
+          createdBy,
+        },
       });
 
       // 2. Reduce Stock
       await tx.inventoryStock.update({
         where: { warehouseId_materialId: { warehouseId, materialId } },
-        data: { quantity: { decrement: Math.abs(quantity) } }
+        data: { quantity: { decrement: Math.abs(quantity) } },
       });
 
       return trx;
@@ -188,10 +202,10 @@ export class InventoryService {
         warehouse: { select: { name: true } },
         material: { select: { code: true, name: true, unit: true } },
         po: { select: { poNumber: true } },
-        boqItem: { select: { description: true } }
+        boqItem: { select: { description: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 200
+      take: 200,
     });
   }
 }

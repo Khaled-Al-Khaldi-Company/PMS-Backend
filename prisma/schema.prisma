@@ -133,6 +133,9 @@ model BOQItem {
   unitPrice   Float // Client Price (Selling price)
   totalValue  Float // quantity * unitPrice (Client Total)
 
+  // Invoice billing: QUANTITY (default) | LUMP_SUM_PROGRESS (نسبة/قيمة للمقطوعية)
+  billingMode String @default("QUANTITY")
+
   // Execution Strategy
   executionType       String @default("SELF") // 'SELF' or 'SUBCONTRACT'
   subcontractorPrice  Float? // Cost Price (if subcontracted)
@@ -336,6 +339,10 @@ model InvoiceDetail {
 
   unitPrice    Float // Price when invoice was generated
   currentValue Float // Executed value this period
+
+  // How this line was entered: QTY | PERCENT | VALUE
+  entryMode              String  @default("QTY")
+  currentProgressPercent Float? // snapshot when billed by progress (مقطوعية)
 }
 
 // =======================

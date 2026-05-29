@@ -22,15 +22,15 @@ import { DailyReportsModule } from './daily-reports/daily-reports.module';
 
 @Module({
   imports: [
-    PrismaModule, 
-    UsersModule, 
-    AuthModule, 
-    ProjectsModule, 
-    BoqModule, 
-    ContractsModule, 
-    InvoicesModule, 
-    DaftraModule, 
-    PurchasesModule, 
+    PrismaModule,
+    UsersModule,
+    AuthModule,
+    ProjectsModule,
+    BoqModule,
+    ContractsModule,
+    InvoicesModule,
+    DaftraModule,
+    PurchasesModule,
     QuotationsModule,
     MaterialsModule,
     SettingsModule,
@@ -39,7 +39,7 @@ import { DailyReportsModule } from './daily-reports/daily-reports.module';
     ExpensesModule,
     InventoryModule,
     QuotationTemplatesModule,
-    DailyReportsModule
+    DailyReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

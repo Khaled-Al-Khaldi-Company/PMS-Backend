@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -11,16 +21,16 @@ export class ProjectsController {
   create(@Body() createProjectDto: any, @Request() req: any) {
     const { clientName, clientId, ...rest } = createProjectDto;
 
-    const clientConn = clientId 
-      ? { connect: { id: clientId } } 
-      : clientName 
+    const clientConn = clientId
+      ? { connect: { id: clientId } }
+      : clientName
         ? { create: { name: clientName } }
         : undefined;
 
     return this.projectsService.create({
       ...rest,
       client: clientConn,
-      manager: { connect: { id: req.user.userId } }
+      manager: { connect: { id: req.user.userId } },
     });
   }
 

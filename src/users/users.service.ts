@@ -22,14 +22,14 @@ export class UsersService {
   async findAll() {
     return this.prisma.user.findMany({
       include: { role: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   async findAllRoles() {
     return this.prisma.role.findMany({
       include: { permissions: true },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
     });
   }
 
@@ -39,22 +39,24 @@ export class UsersService {
 
   async updateRolePermissions(roleId: string, permissionNames: string[]) {
     // Reconnect permissions by name
-    return this.prisma.role.update({
-      where: { id: roleId },
-      data: {
-        permissions: { set: [] } // first disconnect all
-      }
-    }).then(() => {
-      return this.prisma.role.update({
-         where: { id: roleId },
-         data: {
-           permissions: {
-             connect: permissionNames.map(name => ({ name }))
-           }
-         },
-         include: { permissions: true }
+    return this.prisma.role
+      .update({
+        where: { id: roleId },
+        data: {
+          permissions: { set: [] }, // first disconnect all
+        },
+      })
+      .then(() => {
+        return this.prisma.role.update({
+          where: { id: roleId },
+          data: {
+            permissions: {
+              connect: permissionNames.map((name) => ({ name })),
+            },
+          },
+          include: { permissions: true },
+        });
       });
-    });
   }
 
   async createUser(data: any) {
@@ -67,9 +69,9 @@ export class UsersService {
         firstName: data.firstName,
         lastName: data.lastName,
         isActive: data.isActive ?? true,
-        role: { connect: { id: data.roleId } }
+        role: { connect: { id: data.roleId } },
       },
-      include: { role: true }
+      include: { role: true },
     });
   }
 
@@ -79,11 +81,11 @@ export class UsersService {
     if (data.lastName !== undefined) updateData.lastName = data.lastName;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.email !== undefined) updateData.email = data.email;
-    
+
     if (data.roleId) {
       updateData.role = { connect: { id: data.roleId } };
     }
-    
+
     if (data.password) {
       const bcrypt = require('bcrypt');
       updateData.passwordHash = await bcrypt.hash(data.password, 10);
@@ -92,7 +94,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data: updateData,
-      include: { role: true }
+      include: { role: true },
     });
   }
 }

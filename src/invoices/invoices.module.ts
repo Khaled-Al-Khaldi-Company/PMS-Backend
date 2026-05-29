@@ -7,6 +7,6 @@ import { DaftraModule } from '../daftra/daftra.module';
   imports: [DaftraModule],
   controllers: [InvoicesController],
   providers: [InvoicesService],
-  exports: [InvoicesService]
+  exports: [InvoicesService],
 })
 export class InvoicesModule {}

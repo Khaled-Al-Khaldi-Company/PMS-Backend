@@ -5,7 +5,10 @@ import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class DaftraService {
-  constructor(private prisma: PrismaService, private settingsService: SettingsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settingsService: SettingsService,
+  ) {}
 
   private async getDaftraConfig() {
     let settings: Record<string, string> = {};
@@ -15,7 +18,8 @@ export class DaftraService {
       console.warn('System settings not loaded - skipping DB fetch');
     }
     const domain = settings['DAFTRA_DOMAIN'] || 'example';
-    const apiKey = settings['DAFTRA_API_KEY'] || process.env.DAFTRA_API_KEY || '';
+    const apiKey =
+      settings['DAFTRA_API_KEY'] || process.env.DAFTRA_API_KEY || '';
     const baseUrl = `https://${domain}.daftra.com/v2/api`;
     return { baseUrl, apiKey, domain };
   }
@@ -29,7 +33,7 @@ export class DaftraService {
     const { baseUrl, apiKey } = await this.getDaftraConfig();
     try {
       const resp = await fetch(`${baseUrl}/entity/cost_center/list?limit=500`, {
-        headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
+        headers: { APIKEY: apiKey, Accept: 'application/json' },
       });
       const data = await resp.json().catch(() => ({}));
       return data?.data || [];
@@ -41,8 +45,14 @@ export class DaftraService {
   /** Get all PMS projects with their Daftra cost center linking status */
   async getPmsProjects() {
     return this.prisma.project.findMany({
-      select: { id: true, name: true, code: true, status: true, daftraCostCenterId: true },
-      orderBy: { createdAt: 'desc' }
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        status: true,
+        daftraCostCenterId: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -50,7 +60,10 @@ export class DaftraService {
   async linkProject(id: string, daftraCostCenterId: string | null) {
     return this.prisma.project.update({
       where: { id },
-      data: { daftraCostCenterId: daftraCostCenterId === '' ? null : daftraCostCenterId }
+      data: {
+        daftraCostCenterId:
+          daftraCostCenterId === '' ? null : daftraCostCenterId,
+      },
     });
   }
 
@@ -58,37 +71,49 @@ export class DaftraService {
   async createAndLinkCostCenter(projectId: string) {
     const { baseUrl, apiKey, domain } = await this.getDaftraConfig();
 
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project) throw new BadRequestException('المشروع غير موجود');
-    if (project.daftraCostCenterId) throw new BadRequestException('هذا المشروع مربوط بالفعل بمركز تكاليف في دفترة');
+    if (project.daftraCostCenterId)
+      throw new BadRequestException(
+        'هذا المشروع مربوط بالفعل بمركز تكاليف في دفترة',
+      );
 
     const payload = {
       CostCenter: {
         name: project.name,
         code: project.code || project.name.replace(/\s+/g, '-'),
         is_active: 1,
-      }
+      },
     };
 
     const resp = await fetch(`https://${domain}.daftra.com/api2/cost_centers`, {
       method: 'POST',
-      headers: { 'APIKEY': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {
+        APIKEY: apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
 
     if (!resp.ok) {
       const err = await resp.text().catch(() => '');
-      throw new BadRequestException(`فشل إنشاء مركز التكاليف في دفترة: ${resp.status} - ${err}`);
+      throw new BadRequestException(
+        `فشل إنشاء مركز التكاليف في دفترة: ${resp.status} - ${err}`,
+      );
     }
 
     const result = await resp.json();
     const daftraId = result?.id?.toString();
-    if (!daftraId) throw new BadRequestException('لم يُعِد دفترة معرّف مركز التكاليف');
+    if (!daftraId)
+      throw new BadRequestException('لم يُعِد دفترة معرّف مركز التكاليف');
 
     // Link locally
     await this.prisma.project.update({
       where: { id: projectId },
-      data: { daftraCostCenterId: daftraId }
+      data: { daftraCostCenterId: daftraId },
     });
 
     return { status: 'created', daftraId, projectName: project.name };
@@ -96,26 +121,34 @@ export class DaftraService {
 
   async syncCostCenters() {
     const { baseUrl, apiKey, domain } = await this.getDaftraConfig();
-    
+
     if (!apiKey || domain === 'example' || !domain) {
-      throw new BadRequestException('إعدادات الربط غير مكتملة. يرجى إدخال الدومين ومفتاح API.');
+      throw new BadRequestException(
+        'إعدادات الربط غير مكتملة. يرجى إدخال الدومين ومفتاح API.',
+      );
     }
 
     try {
       const response = await fetch(`${baseUrl}/entity/client/list?limit=1`, {
-        headers: { 
-          'APIKEY': apiKey, 
+        headers: {
+          APIKEY: apiKey,
           'Content-Type': 'application/json',
-          'Accept': 'application/json' 
+          Accept: 'application/json',
         },
       });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'No response body');
-        throw new BadRequestException(`مفتاح غير صالح أو حساب منتهي الصلاحية. سيرفر دفترة قال: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new BadRequestException(
+          `مفتاح غير صالح أو حساب منتهي الصلاحية. سيرفر دفترة قال: ${response.status} ${response.statusText} - ${errorText}`,
+        );
       }
 
-      return { status: 'success', synced: 0, message: 'تم التحقق من الاتصال بنجاح.' };
+      return {
+        status: 'success',
+        synced: 0,
+        message: 'تم التحقق من الاتصال بنجاح.',
+      };
     } catch (err: any) {
       if (err instanceof BadRequestException) throw err;
       throw new BadRequestException('فشل الاتصال: ' + err.message);
@@ -125,18 +158,22 @@ export class DaftraService {
   async getDaftraClients() {
     const { baseUrl, apiKey } = await this.getDaftraConfig();
     try {
-      let allClients: any[] = [];
+      const allClients: any[] = [];
       let page = 1;
       let hasMore = true;
       const seenIds = new Set();
 
-      while (hasMore && page <= 50) { // Increased safety to 50 pages to ensure full DB load
-        const resp = await fetch(`${baseUrl}/entity/client/list?page=${page}&limit=500`, {
-          headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
-        });
+      while (hasMore && page <= 50) {
+        // Increased safety to 50 pages to ensure full DB load
+        const resp = await fetch(
+          `${baseUrl}/entity/client/list?page=${page}&limit=500`,
+          {
+            headers: { APIKEY: apiKey, Accept: 'application/json' },
+          },
+        );
         const data = await resp.json().catch(() => ({}));
         const items = data?.data || [];
-        
+
         if (items.length > 0) {
           // Deduplicate items
           let addedNew = false;
@@ -165,18 +202,22 @@ export class DaftraService {
   async getDaftraSuppliers() {
     const { baseUrl, apiKey } = await this.getDaftraConfig();
     try {
-      let allSuppliers: any[] = [];
+      const allSuppliers: any[] = [];
       let page = 1;
       let hasMore = true;
       const seenIds = new Set();
 
-      while (hasMore && page <= 50) { // Increased safety to 50 pages
-        const resp = await fetch(`${baseUrl}/entity/supplier/list?page=${page}&limit=500`, {
-          headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
-        });
+      while (hasMore && page <= 50) {
+        // Increased safety to 50 pages
+        const resp = await fetch(
+          `${baseUrl}/entity/supplier/list?page=${page}&limit=500`,
+          {
+            headers: { APIKEY: apiKey, Accept: 'application/json' },
+          },
+        );
         const data = await resp.json().catch(() => ({}));
         const items = data?.data || [];
-        
+
         if (items.length > 0) {
           // Deduplicate items
           let addedNew = false;
@@ -204,27 +245,29 @@ export class DaftraService {
 
   async getPmsSuppliers() {
     return this.prisma.supplier.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   async linkSupplier(id: string, daftraSupplierId: string | null) {
     return this.prisma.supplier.update({
       where: { id },
-      data: { daftraSupplierId: daftraSupplierId === "" ? null : daftraSupplierId }
+      data: {
+        daftraSupplierId: daftraSupplierId === '' ? null : daftraSupplierId,
+      },
     });
   }
 
   async getPmsClients() {
     return this.prisma.client.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   async linkClient(id: string, daftraClientId: string | null) {
     return this.prisma.client.update({
       where: { id },
-      data: { daftraClientId: daftraClientId === "" ? null : daftraClientId }
+      data: { daftraClientId: daftraClientId === '' ? null : daftraClientId },
     });
   }
 
@@ -232,23 +275,37 @@ export class DaftraService {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id: invoiceId },
       include: {
-        contract: { include: { subcontractor: true, project: { include: { client: true } } } },
-        details: { include: { boqItem: true } }
-      }
+        contract: {
+          include: {
+            subcontractor: true,
+            project: { include: { client: true } },
+          },
+        },
+        details: { include: { boqItem: true } },
+      },
     });
 
     if (!invoice || invoice.status !== 'CERTIFIED') {
-      throw new BadRequestException('Only certified invoices can be pushed to Daftra');
+      throw new BadRequestException(
+        'Only certified invoices can be pushed to Daftra',
+      );
     }
 
     const isMainContract = invoice.contract.type === 'MAIN_CONTRACT';
-    const totalDeductions = invoice.retentionAmount + invoice.advanceDeduction + invoice.delayPenalty + invoice.otherDeductions;
+    const totalDeductions =
+      invoice.retentionAmount +
+      invoice.advanceDeduction +
+      invoice.delayPenalty +
+      invoice.otherDeductions;
     const { baseUrl, apiKey, domain } = await this.getDaftraConfig();
 
     // Build items array
     const items: any[] = invoice.details.map((detail: any, index: number) => ({
-      item: detail.boqItem.itemCode || detail.boqItem.description || `بند ${index + 1}`,
-      description: detail.boqItem.description || "",
+      item:
+        detail.boqItem.itemCode ||
+        detail.boqItem.description ||
+        `بند ${index + 1}`,
+      description: detail.boqItem.description || '',
       unit_price: Number(detail.unitPrice),
       quantity: Number(detail.currentQty),
       tax1: 1, // Defaulting to tax applied
@@ -275,7 +332,9 @@ export class DaftraService {
       // ────────────────────────────────────────────────────────
       const client = invoice.contract.project?.client;
       if (!client?.daftraClientId) {
-        throw new BadRequestException(`لا يمكن ترحيل المستخلص. العميل/الجهة المالكة "${client?.name || ''}" غير مربوط بدفترة.`);
+        throw new BadRequestException(
+          `لا يمكن ترحيل المستخلص. العميل/الجهة المالكة "${client?.name || ''}" غير مربوط بدفترة.`,
+        );
       }
 
       daftraPayload = {
@@ -292,19 +351,23 @@ export class DaftraService {
 
       if (invoice.contract.project?.daftraCostCenterId) {
         daftraPayload.CostCenter = [
-          { cost_center_id: Number(invoice.contract.project.daftraCostCenterId), percentage: 100 }
+          {
+            cost_center_id: Number(invoice.contract.project.daftraCostCenterId),
+            percentage: 100,
+          },
         ];
       }
 
       apiUrl = `https://${domain}.daftra.com/api2/invoices`;
-
     } else {
       // ────────────────────────────────────────────────────────
       // PURCHASE INVOICE (SUBCONTRACT)
       // ────────────────────────────────────────────────────────
       const supplier = invoice.contract.subcontractor;
       if (!supplier?.daftraSupplierId) {
-        throw new BadRequestException(`لا يمكن ترحيل المستخلص. المقاول/المورد "${supplier?.name || ''}" غير مربوط بدفترة.`);
+        throw new BadRequestException(
+          `لا يمكن ترحيل المستخلص. المقاول/المورد "${supplier?.name || ''}" غير مربوط بدفترة.`,
+        );
       }
 
       daftraPayload = {
@@ -321,7 +384,10 @@ export class DaftraService {
 
       if (invoice.contract.project?.daftraCostCenterId) {
         daftraPayload.CostCenter = [
-          { cost_center_id: Number(invoice.contract.project.daftraCostCenterId), percentage: 100 }
+          {
+            cost_center_id: Number(invoice.contract.project.daftraCostCenterId),
+            percentage: 100,
+          },
         ];
       }
 
@@ -331,20 +397,28 @@ export class DaftraService {
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'APIKEY': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(daftraPayload)
+        headers: {
+          APIKEY: apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(daftraPayload),
       });
-      
+
       const rawText = await response.text();
       let responseData: any = {};
-      try { responseData = JSON.parse(rawText); } catch(e) {}
+      try {
+        responseData = JSON.parse(rawText);
+      } catch (e) {
+        // ignore parse error
+      }
 
       if (!response.ok || responseData.code === 400 || responseData.error) {
         throw new Error(`دفترة رفض الطلب: ${rawText}`);
       }
 
-      const invoiceDaftraId = 
-        responseData.id || 
+      const invoiceDaftraId =
+        responseData.id ||
         responseData.Invoice?.id ||
         responseData.PurchaseInvoice?.id ||
         responseData.data?.id ||
@@ -352,17 +426,24 @@ export class DaftraService {
         responseData.invoice_id;
 
       if (!invoiceDaftraId) {
-        throw new Error(`دفترة قَبِل الطلب لكنه لم يعط رقم فاتورة! الرد الكامل: ${rawText}`);
+        throw new Error(
+          `دفترة قَبِل الطلب لكنه لم يعط رقم فاتورة! الرد الكامل: ${rawText}`,
+        );
       }
-      
+
       await this.prisma.invoice.update({
         where: { id: invoice.id },
-        data: { daftraInvoiceId: invoiceDaftraId.toString() }
+        data: { daftraInvoiceId: invoiceDaftraId.toString() },
       });
 
-      return { status: 'Invoice pushed successfully', externalId: invoiceDaftraId };
+      return {
+        status: 'Invoice pushed successfully',
+        externalId: invoiceDaftraId,
+      };
     } catch (error: any) {
-      throw new BadRequestException(`فشل ترحيل المستخلص إلى دفترة: ${error.message}`);
+      throw new BadRequestException(
+        `فشل ترحيل المستخلص إلى دفترة: ${error.message}`,
+      );
     }
   }
 
@@ -372,7 +453,7 @@ export class DaftraService {
       // Fetch the first purchase order list from V2 API
       const res = await fetch(`${baseUrl}/entity/purchase_order/list?limit=1`, {
         method: 'GET',
-        headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
+        headers: { APIKEY: apiKey, Accept: 'application/json' },
       });
       const text = await res.text();
       try {
@@ -391,15 +472,21 @@ export class DaftraService {
   async pushPurchaseOrder(poId: string) {
     const po = await this.prisma.purchaseOrder.findUnique({
       where: { id: poId },
-      include: { project: true, supplier: true, items: { include: { material: true } } }
+      include: {
+        project: true,
+        supplier: true,
+        items: { include: { material: true } },
+      },
     });
 
     if (!po) throw new BadRequestException('طلب الشراء غير موجود');
-    
+
     const { baseUrl, apiKey, domain } = await this.getDaftraConfig();
 
     if (!po.supplier?.daftraSupplierId) {
-      throw new BadRequestException(`المورد "${po.supplier?.name}" غير مربوط بدفترة! يرجى الذهاب لصفحة "إعدادات دفترة" وربط هذا المورد قبل تصدير أمر الشراء.`);
+      throw new BadRequestException(
+        `المورد "${po.supplier?.name}" غير مربوط بدفترة! يرجى الذهاب لصفحة "إعدادات دفترة" وربط هذا المورد قبل تصدير أمر الشراء.`,
+      );
     }
 
     const payloadPurchaseOrder: any = {
@@ -413,49 +500,80 @@ export class DaftraService {
       PurchaseOrder: {
         ...payloadPurchaseOrder,
         draft: 1,
-        status: 4
+        status: 4,
       },
       Supplier: {
         id: Number(po.supplier.daftraSupplierId),
-        email: (po.supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)) ? po.supplier.email : `vendor${po.supplier.daftraSupplierId}@example.com`
+        email:
+          po.supplier.email &&
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)
+            ? po.supplier.email
+            : `vendor${po.supplier.daftraSupplierId}@example.com`,
       },
       PurchaseOrderItem: po.items.map((item, index) => ({
         item: item.material.name || `مادة ${index + 1}`, // 'item' is required by Daftra V1 API
-        description: item.material.name || "",
-        quantity: typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1,
-        unit_price: typeof item.unitPrice === 'number' && item.unitPrice >= 0 ? item.unitPrice : 0,
-        tax1: po.taxAmount > 0 ? 1 : 0
-      }))
+        description: item.material.name || '',
+        quantity:
+          typeof item.quantity === 'number' && item.quantity > 0
+            ? item.quantity
+            : 1,
+        unit_price:
+          typeof item.unitPrice === 'number' && item.unitPrice >= 0
+            ? item.unitPrice
+            : 0,
+        tax1: po.taxAmount > 0 ? 1 : 0,
+      })),
     };
 
     if (po.project?.daftraCostCenterId) {
       daftraPayload.CostCenter = [
-        { cost_center_id: Number(po.project.daftraCostCenterId), percentage: 100 }
+        {
+          cost_center_id: Number(po.project.daftraCostCenterId),
+          percentage: 100,
+        },
       ];
     }
 
     try {
       // Use the stable v1 API endpoint for purchase_order which perfectly matches the nested payload structure
-      const response = await fetch(`https://${domain}.daftra.com/api2/purchase_orders`, {
-        method: 'POST',
-        headers: { 'APIKEY': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(daftraPayload)
-      });
-      
+      const response = await fetch(
+        `https://${domain}.daftra.com/api2/purchase_orders`,
+        {
+          method: 'POST',
+          headers: {
+            APIKEY: apiKey,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(daftraPayload),
+        },
+      );
+
       const rawText = await response.text();
       let resData: any = {};
-      try { resData = JSON.parse(rawText); } catch(e) {}
-
-      if (!response.ok || resData.code === 400 || resData.error) {
-         throw new BadRequestException(`سيرفر دفترة يرفض أمر الشراء. الرد: ${rawText}`);
+      try {
+        resData = JSON.parse(rawText);
+      } catch (e) {
+        // ignore parse error
       }
 
-      const daftraId = resData?.id?.toString() || resData?.PurchaseOrder?.id?.toString() || `SYNCED-${Date.now()}`;
-      
+      if (!response.ok || resData.code === 400 || resData.error) {
+        throw new BadRequestException(
+          `سيرفر دفترة يرفض أمر الشراء. الرد: ${rawText}`,
+        );
+      }
+
+      const daftraId =
+        resData?.id?.toString() ||
+        resData?.PurchaseOrder?.id?.toString() ||
+        `SYNCED-${Date.now()}`;
+
       return { status: 'success', daftraId };
-    } catch(err: any) {
-        if (err instanceof BadRequestException) throw err;
-        throw new BadRequestException('فشل تقني في رفع أمر الشراء: ' + err.message);
+    } catch (err: any) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException(
+        'فشل تقني في رفع أمر الشراء: ' + err.message,
+      );
     }
   }
 
@@ -465,49 +583,68 @@ export class DaftraService {
   async pushExpense(expenseId: string) {
     const expense = await this.prisma.expense.findUnique({
       where: { id: expenseId },
-      include: { project: true }
+      include: { project: true },
     });
 
     if (!expense) throw new BadRequestException('المصروف غير موجود');
-    
+
     const { apiKey, domain } = await this.getDaftraConfig();
 
     const daftraPayload: any = {
       Expense: {
-        staff_id: 1, 
+        staff_id: 1,
         amount: expense.amount,
         date: new Date(expense.date).toISOString().split('T')[0],
         notes: `${expense.category} | ${expense.expenseNo} | ${expense.description} | Pushed from PMS`,
-      }
+      },
     };
 
     if (expense.project?.daftraCostCenterId) {
       daftraPayload.CostCenter = [
-        { cost_center_id: Number(expense.project.daftraCostCenterId), percentage: 100 }
+        {
+          cost_center_id: Number(expense.project.daftraCostCenterId),
+          percentage: 100,
+        },
       ];
     }
 
     try {
-      const response = await fetch(`https://${domain}.daftra.com/api2/expenses`, {
-        method: 'POST',
-        headers: { 'APIKEY': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(daftraPayload)
-      });
-      
+      const response = await fetch(
+        `https://${domain}.daftra.com/api2/expenses`,
+        {
+          method: 'POST',
+          headers: {
+            APIKEY: apiKey,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(daftraPayload),
+        },
+      );
+
       const rawText = await response.text();
       let resData: any = {};
-      try { resData = JSON.parse(rawText); } catch(e) {}
-
-      if (!response.ok || resData.code === 400 || resData.error) {
-         throw new BadRequestException(`فشل ترحيل المصروف لدفترة. الرد: ${rawText}`);
+      try {
+        resData = JSON.parse(rawText);
+      } catch (e) {
+        // ignore parse error
       }
 
-      const daftraId = resData?.id?.toString() || resData?.Expense?.id?.toString();
-      
+      if (!response.ok || resData.code === 400 || resData.error) {
+        throw new BadRequestException(
+          `فشل ترحيل المصروف لدفترة. الرد: ${rawText}`,
+        );
+      }
+
+      const daftraId =
+        resData?.id?.toString() || resData?.Expense?.id?.toString();
+
       return { status: 'success', daftraId };
-    } catch(err: any) {
-        if (err instanceof BadRequestException) throw err;
-        throw new BadRequestException('فشل تقني في ترحيل المصروف: ' + err.message);
+    } catch (err: any) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException(
+        'فشل تقني في ترحيل المصروف: ' + err.message,
+      );
     }
   }
 
@@ -517,7 +654,7 @@ export class DaftraService {
   async syncInvoicePaymentStatus(invoiceId: string) {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id: invoiceId },
-      include: { contract: true }
+      include: { contract: true },
     });
 
     if (!invoice || !invoice.daftraInvoiceId) {
@@ -526,15 +663,18 @@ export class DaftraService {
 
     const { apiKey, domain } = await this.getDaftraConfig();
     const isMainContract = invoice.contract.type === 'MAIN_CONTRACT';
-    
+
     // Main contracts use invoices, subcontracts use purchase_invoices
     const endpoint = isMainContract ? 'invoices' : 'purchase_invoices';
-    
+
     try {
-      const response = await fetch(`https://${domain}.daftra.com/api2/${endpoint}/${invoice.daftraInvoiceId}`, {
-        method: 'GET',
-        headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
-      });
+      const response = await fetch(
+        `https://${domain}.daftra.com/api2/${endpoint}/${invoice.daftraInvoiceId}`,
+        {
+          method: 'GET',
+          headers: { APIKEY: apiKey, Accept: 'application/json' },
+        },
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -546,11 +686,11 @@ export class DaftraService {
               daftraInvoiceId: null,
               paymentStatus: 'UNPAID',
               paidAmount: 0,
-            }
+            },
           });
           throw new BadRequestException(
             'تنبيه: لم يتم العثور على المستند في دفترة (قد يكون محذوفاً). ' +
-            'تم إعادة المستخلص تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.'
+              'تم إعادة المستخلص تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.',
           );
         }
         throw new Error(`فشل الاتصال: ${response.status}`);
@@ -558,38 +698,64 @@ export class DaftraService {
 
       const resData = await response.json();
       const nodeName = isMainContract ? 'Invoice' : 'PurchaseInvoice';
-      const daftraDoc = resData.data?.[nodeName] || resData[nodeName] || resData.data?.PurchaseOrder || resData.data || {};
+      const daftraDoc =
+        resData.data?.[nodeName] ||
+        resData[nodeName] ||
+        resData.data?.PurchaseOrder ||
+        resData.data ||
+        {};
 
-      let payStatus = "UNPAID";
+      let payStatus = 'UNPAID';
       let paidAmt = 0;
-      
-      const totalAmount = Number(daftraDoc.summary_total ?? daftraDoc.total ?? daftraDoc.total_amount ?? invoice.netAmount);
-      const dueAmount = Number(daftraDoc.summary_unpaid ?? daftraDoc.due_amount ?? daftraDoc.unpaid ?? totalAmount);
+
+      const totalAmount = Number(
+        daftraDoc.summary_total ??
+          daftraDoc.total ??
+          daftraDoc.total_amount ??
+          invoice.netAmount,
+      );
+      const dueAmount = Number(
+        daftraDoc.summary_unpaid ??
+          daftraDoc.due_amount ??
+          daftraDoc.unpaid ??
+          totalAmount,
+      );
 
       // Check explicit payment_status if due amount isn't reliable
       const daftraStatus = daftraDoc.payment_status || daftraDoc.status; // status=3 or 2 in some APIs means Paid
 
-      if (daftraStatus === 3 || daftraStatus === 2 || daftraStatus === "Paid" || daftraStatus === "مدفوع") {
-         payStatus = "PAID";
-         paidAmt = totalAmount;
+      if (
+        daftraStatus === 3 ||
+        daftraStatus === 2 ||
+        daftraStatus === 'Paid' ||
+        daftraStatus === 'مدفوع'
+      ) {
+        payStatus = 'PAID';
+        paidAmt = totalAmount;
       } else if (totalAmount > 0) {
         if (dueAmount <= 0) {
-          payStatus = "PAID";
+          payStatus = 'PAID';
           paidAmt = totalAmount;
         } else if (dueAmount < totalAmount) {
-          payStatus = "PARTIAL";
+          payStatus = 'PARTIAL';
           paidAmt = totalAmount - dueAmount;
         }
       }
 
       await this.prisma.invoice.update({
         where: { id: invoiceId },
-        data: { paymentStatus: payStatus, paidAmount: paidAmt }
+        data: { paymentStatus: payStatus, paidAmount: paidAmt },
       });
 
-      return { paymentStatus: payStatus, paidAmount: paidAmt, daftraRaw: resData };
+      return {
+        paymentStatus: payStatus,
+        paidAmount: paidAmt,
+        daftraRaw: resData,
+      };
     } catch (err: any) {
-      throw new BadRequestException(`فشل استرداد حالة السداد من دفترة: ${err.message}`);
+      throw new BadRequestException(
+        `فشل استرداد حالة السداد من دفترة: ${err.message}`,
+      );
     }
   }
 
@@ -600,31 +766,40 @@ export class DaftraService {
     const { apiKey, domain } = await this.getDaftraConfig();
 
     try {
-      const response = await fetch(`https://${domain}.daftra.com/api2/purchase_orders/${daftraId}`, {
-        method: 'GET',
-        headers: { 'APIKEY': apiKey, 'Accept': 'application/json' }
-      });
+      const response = await fetch(
+        `https://${domain}.daftra.com/api2/purchase_orders/${daftraId}`,
+        {
+          method: 'GET',
+          headers: { APIKEY: apiKey, Accept: 'application/json' },
+        },
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
           // إعادة أمر الشراء لحالة المسودة إذا تم حذفه من دفترة
           await this.prisma.purchaseOrder.update({
             where: { id: poId },
-            data: { status: 'PENDING', daftraId: null }
+            data: { status: 'PENDING', daftraId: null },
           });
           throw new BadRequestException(
             'تنبيه: لم يتم العثور على أمر الشراء في دفترة (قد يكون محذوفاً). ' +
-            'تم إعادته تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.'
+              'تم إعادته تلقائياً إلى حالة المسودة حتى تتمكن من إعادة الترحيل.',
           );
         }
         throw new Error(`فشل الاتصال بدفترة: ${response.status}`);
       }
 
       const resData = await response.json();
-      const poData = resData.data?.PurchaseOrder || resData.PurchaseOrder || resData.data || {};
+      const poData =
+        resData.data?.PurchaseOrder ||
+        resData.PurchaseOrder ||
+        resData.data ||
+        {};
       return { status: 'synced', daftraData: poData };
     } catch (err: any) {
-      throw new BadRequestException(`فشل مزامنة أمر الشراء من دفترة: ${err.message}`);
+      throw new BadRequestException(
+        `فشل مزامنة أمر الشراء من دفترة: ${err.message}`,
+      );
     }
   }
 }
