@@ -109,6 +109,78 @@ export class PurchasesService {
     return po;
   }
 
+  async update(id: string, data: any) {
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: { items: true, supplier: true },
+    });
+    if (!po) throw new NotFoundException('طلب الشراء غير موجود');
+    if (po.status !== 'PENDING' && po.status !== 'APPROVED')
+      throw new BadRequestException('لا يمكن تعديل طلب شراء في هذه الحالة');
+    if (po.status === 'APPROVED' && po.daftraId)
+      throw new BadRequestException('لا يمكن تعديل طلب شراء تم ترحيله إلى دفترة');
+
+    const { projectId, supplierName, expectedDate, hasVat, items } = data;
+
+    const sName = (supplierName || po.supplier?.name || 'بدون اسم').trim();
+    const supplierRef = await this.prisma.supplier.findFirst({
+      where: { name: sName },
+    });
+    const supplierQuery = supplierRef
+      ? { connect: { id: supplierRef.id } }
+      : { create: { name: sName } };
+
+    // Delete old items
+    await this.prisma.purchaseOrderItem.deleteMany({
+      where: { purchaseOrderId: id },
+    });
+
+    const totalAmount = items.reduce(
+      (sum: number, item: any) =>
+        sum + (Number(item.qty) || 1) * (Number(item.price) || 0),
+      0,
+    );
+
+    return this.prisma.purchaseOrder.update({
+      where: { id },
+      data: {
+        project: { connect: { id: projectId } },
+        supplier: supplierQuery,
+        expectedDate: expectedDate ? new Date(expectedDate) : null,
+        totalAmount,
+        taxAmount: hasVat ? totalAmount * 0.15 : 0,
+        netAmount: hasVat ? totalAmount * 1.15 : totalAmount,
+        items: {
+          create: items.map((item: any, i: number) => {
+            const mName = item.materialName?.trim() || `مادة عامة ${i + 1}`;
+            const mCode = mName.toUpperCase().replace(/\s+/g, '_') + '-MAT';
+            return {
+              material: {
+                connectOrCreate: {
+                  where: { code: mCode },
+                  create: {
+                    name: mName,
+                    code: mCode,
+                    unit: item.unit || 'حبه',
+                  },
+                },
+              },
+              quantity: Number(item.qty) || 1,
+              unitPrice: Number(item.price) || 0,
+              totalPrice: (Number(item.qty) || 1) * (Number(item.price) || 0),
+            };
+          }),
+        },
+        // If reverting from APPROVED back to PENDING after edit
+        ...(po.status === 'APPROVED' ? { status: 'PENDING', approvedBy: null, approvedAt: null } : {}),
+      },
+      include: {
+        items: { include: { material: true } },
+        supplier: true,
+      },
+    });
+  }
+
   async syncStatusFromDaftra(id: string) {
     const po = await this.prisma.purchaseOrder.findUnique({ where: { id } });
     if (!po) throw new NotFoundException('طلب الشراء غير موجود');

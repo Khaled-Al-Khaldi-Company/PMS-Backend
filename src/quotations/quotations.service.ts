@@ -79,14 +79,36 @@ export class QuotationsService {
     });
   }
 
+  async revertToDraft(id: string) {
+    const existing = await this.prisma.quotation.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('عرض السعر غير موجود');
+    if (existing.status !== 'APPROVED')
+      throw new BadRequestException('يمكن إرجاع عروض الأسعار المعتمدة فقط للمسودة.');
+    if (existing.projectId)
+      throw new BadRequestException('لا يمكن إرجاع عرض سعر تم تحويله لمشروع.');
+
+    return this.prisma.quotation.update({
+      where: { id },
+      data: {
+        status: 'DRAFT',
+        approvedBy: null,
+        approvedAt: null,
+      },
+    });
+  }
+
   async update(id: string, data: any, reqUser?: any) {
     const existing = await this.prisma.quotation.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Quotation not found');
 
     if (existing.status === 'APPROVED') {
-      const userPermissions = reqUser?.permissions || [];
-      if (!userPermissions.includes('QUOTATION_FORCE_EDIT')) {
-        throw new BadRequestException('لا يمكن تعديل عرض سعر معتمد.');
+      const { status: newStatus } = data;
+      // Allow reverting to DRAFT without FORCE_EDIT
+      if (newStatus !== 'DRAFT') {
+        const userPermissions = reqUser?.permissions || [];
+        if (!userPermissions.includes('QUOTATION_FORCE_EDIT')) {
+          throw new BadRequestException('لا يمكن تعديل عرض سعر معتمد.');
+        }
       }
     }
 

@@ -46,6 +46,12 @@ export class QuotationsController {
     return this.quotationsService.update(id, updateQuotationDto, req.user);
   }
 
+  @Patch(':id/revert-to-draft')
+  @Permissions('QUOTATION_CREATE', 'QUOTATION_APPROVE')
+  revertToDraft(@Param('id') id: string) {
+    return this.quotationsService.revertToDraft(id);
+  }
+
   @Post(':id/convert')
   @Permissions('QUOTATION_APPROVE')
   convertToProject(@Param('id') id: string, @Req() req: any) {

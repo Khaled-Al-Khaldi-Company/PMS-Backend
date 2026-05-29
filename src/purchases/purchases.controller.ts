@@ -36,6 +36,12 @@ export class PurchasesController {
     return this.purchasesService.findOne(id);
   }
 
+  @Patch(':id')
+  @Permissions('PO_CREATE')
+  update(@Param('id') id: string, @Body() updatePurchaseDto: any) {
+    return this.purchasesService.update(id, updatePurchaseDto);
+  }
+
   @Patch(':id/sync-daftra')
   @Permissions('PO_APPROVE')
   syncStatusFromDaftra(@Param('id') id: string) {
