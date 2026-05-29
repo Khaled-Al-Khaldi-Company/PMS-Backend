@@ -53,8 +53,8 @@ export class ContractsController {
   }
 
   @Get()
-  findAll(@Query('type') type?: string) {
-    return this.contractsService.findAll(type);
+  findAll(@Query('type') type?: string, @Query('projectId') projectId?: string) {
+    return this.contractsService.findAll(type, projectId);
   }
 
   @Get('project/:projectId')
