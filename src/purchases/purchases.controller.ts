@@ -48,6 +48,12 @@ export class PurchasesController {
     return this.purchasesService.approveStatus(id, req.user.name);
   }
 
+  @Post(':id/post')
+  @Permissions('PO_APPROVE')
+  postToDaftra(@Param('id') id: string) {
+    return this.purchasesService.postToDaftra(id);
+  }
+
   @Delete(':id')
   @Permissions('PO_CREATE')
   remove(@Param('id') id: string) {

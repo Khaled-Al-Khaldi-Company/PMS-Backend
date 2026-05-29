@@ -127,27 +127,42 @@ export class PurchasesService {
   }
 
   async approveStatus(id: string, userName: string) {
-    // 1. Try to push to Daftra
-    let daftraId: string | undefined;
-    try {
-      const result = await this.daftraService.pushPurchaseOrder(id);
-      daftraId = result?.daftraId;
-    } catch (err: any) {
-      throw new BadRequestException(
-        `لا يمكن اعتماد طلب الشراء بسبب فشل المزامنة مع دفترة: ${err.message}`,
-      );
-    }
+    const po = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+    if (!po) throw new NotFoundException('طلب الشراء غير موجود');
+    if (po.status !== 'PENDING')
+      throw new BadRequestException('يمكن اعتماد طلبات الشراء قيد المراجعة فقط');
 
-    // 2. Local approval + save Daftra ID
     return this.prisma.purchaseOrder.update({
       where: { id },
       data: {
         status: 'APPROVED',
         approvedBy: userName,
         approvedAt: new Date(),
-        ...(daftraId ? { daftraId } : {}),
       },
     });
+  }
+
+  async postToDaftra(id: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+    if (!po) throw new NotFoundException('طلب الشراء غير موجود');
+    if (po.status !== 'APPROVED')
+      throw new BadRequestException('يجب اعتماد طلب الشراء أولاً قبل الترحيل إلى دفترة');
+    if (po.daftraId)
+      throw new BadRequestException('طلب الشراء هذا مرحل بالفعل إلى دفترة');
+
+    try {
+      const result = await this.daftraService.pushPurchaseOrder(id);
+      return this.prisma.purchaseOrder.update({
+        where: { id },
+        data: {
+          daftraId: result?.daftraId,
+        },
+      });
+    } catch (err: any) {
+      throw new BadRequestException(
+        `فشل الترحيل إلى دفترة: ${err.message}`,
+      );
+    }
   }
 
   async remove(id: string) {
