@@ -21,6 +21,22 @@ export class ContractsService {
     return this.prisma.contract.create({ data });
   }
 
+  async findAll(type?: string): Promise<Contract[]> {
+    const where: any = {};
+    if (type && ['MAIN_CONTRACT', 'SUBCONTRACT'].includes(type)) {
+      where.type = type;
+    }
+    return this.prisma.contract.findMany({
+      where,
+      include: {
+        subcontractor: true,
+        invoices: true,
+        project: { include: { client: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findAllByProject(projectId: string): Promise<Contract[]> {
     return this.prisma.contract.findMany({
       where: { projectId },

@@ -8,6 +8,7 @@ import {
   UseGuards,
   Delete,
   Req,
+  Query,
 } from '@nestjs/common';
 import { ContractsService } from './contracts.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -49,6 +50,11 @@ export class ContractsController {
             }
           : undefined,
     });
+  }
+
+  @Get()
+  findAll(@Query('type') type?: string) {
+    return this.contractsService.findAll(type);
   }
 
   @Get('project/:projectId')
