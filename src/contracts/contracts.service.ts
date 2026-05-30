@@ -61,18 +61,23 @@ export class ContractsService {
   }
 
   async findOne(id: string): Promise<Contract> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id },
-      include: {
-        subcontractor: true,
-        invoices: { include: { details: true } },
-        items: { include: { boqItem: true } },
-        changeOrders: { include: { items: true } },
-        project: { include: { client: true } },
-      },
-    });
-    if (!contract) throw new NotFoundException('العقد غير موجود');
-    return contract;
+    try {
+      const contract = await this.prisma.contract.findUnique({
+        where: { id },
+        include: {
+          subcontractor: true,
+          invoices: { include: { details: true } },
+          items: { include: { boqItem: true } },
+          changeOrders: { include: { items: true } },
+          project: { include: { client: true } },
+        },
+      });
+      if (!contract) throw new NotFoundException('العقد غير موجود');
+      return contract;
+    } catch (error: any) {
+      console.error('findOne error:', error?.message, error?.stack);
+      throw error;
+    }
   }
 
   async update(
