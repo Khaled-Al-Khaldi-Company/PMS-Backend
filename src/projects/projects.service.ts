@@ -14,8 +14,14 @@ export class ProjectsService {
     return this.prisma.project.create({ data });
   }
 
-  async findAll(): Promise<Project[]> {
+  async findAll(user?: any): Promise<Project[]> {
+    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    const where: any = {};
+    if (!canViewAll && user?.userId) {
+      where.managerId = user.userId;
+    }
     return this.prisma.project.findMany({
+      where,
       include: {
         manager: {
           select: { id: true, firstName: true, lastName: true },
@@ -182,8 +188,14 @@ export class ProjectsService {
     };
   }
 
-  async getGlobalDashboard() {
+  async getGlobalDashboard(user?: any) {
+    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    const where: any = {};
+    if (!canViewAll && user?.userId) {
+      where.managerId = user.userId;
+    }
     const projects = await this.prisma.project.findMany({
+      where,
       include: {
         contracts: true,
         purchaseOrders: true,

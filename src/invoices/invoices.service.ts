@@ -179,6 +179,7 @@ export class InvoicesService {
               netAmount,
               status: 'DRAFT',
               createdBy: payload.createdBy,
+              createdById: payload.createdById,
               details: {
                 create: detailsToCreate,
               },

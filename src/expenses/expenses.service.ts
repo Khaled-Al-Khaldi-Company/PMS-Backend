@@ -12,7 +12,7 @@ export class ExpensesService {
     // Convert amount to number safely
     const amount = Number(data.amount) || 0;
 
-    const { projectId, ...rest } = data;
+    const { projectId, requestedBy, requestedById, ...rest } = data;
     const projectConn = projectId
       ? { project: { connect: { id: projectId } } }
       : {};
@@ -22,14 +22,25 @@ export class ExpensesService {
         ...rest,
         expenseNo,
         amount,
+        requestedBy,
+        requestedById,
         ...projectConn,
       },
       include: { project: true },
     });
   }
 
-  async findAll() {
+  async findAll(user?: any) {
+    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    const where: any = {};
+    if (!canViewAll && user?.userId) {
+      where.OR = [
+        { requestedById: user.userId },
+        { project: { managerId: user.userId } },
+      ];
+    }
     return this.prisma.expense.findMany({
+      where,
       include: { project: true },
       orderBy: { date: 'desc' },
     });

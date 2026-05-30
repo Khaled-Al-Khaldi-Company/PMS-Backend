@@ -23,12 +23,13 @@ export class PurchasesController {
   @Permissions('PO_CREATE')
   create(@Body() createPurchaseDto: any, @Req() req: any) {
     createPurchaseDto.createdBy = req.user.name;
+    createPurchaseDto.createdById = req.user.userId;
     return this.purchasesService.create(createPurchaseDto);
   }
 
   @Get()
-  findAll() {
-    return this.purchasesService.findAll();
+  findAll(@Req() req: any) {
+    return this.purchasesService.findAll(req.user);
   }
 
   @Get(':id')

@@ -26,6 +26,7 @@ export class DailyReportsService {
         workPerformed,
         safetyNotes,
         createdBy,
+        createdById: data.createdById,
         labors: {
           create:
             labors?.map((l: any) => ({

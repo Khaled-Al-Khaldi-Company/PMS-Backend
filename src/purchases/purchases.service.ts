@@ -81,6 +81,7 @@ export class PurchasesService {
               0,
             ),
         createdBy: data.createdBy,
+        createdById: data.createdById,
       },
       include: {
         items: { include: { material: true } },
@@ -89,8 +90,17 @@ export class PurchasesService {
     });
   }
 
-  async findAll() {
+  async findAll(user?: any) {
+    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    const where: any = {};
+    if (!canViewAll && user?.userId) {
+      where.OR = [
+        { createdById: user.userId },
+        { project: { managerId: user.userId } },
+      ];
+    }
     return this.prisma.purchaseOrder.findMany({
+      where,
       include: { project: true, supplier: true },
       orderBy: { createdAt: 'desc' },
     });

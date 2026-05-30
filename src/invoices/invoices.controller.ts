@@ -34,6 +34,7 @@ export class InvoicesController {
     @Req() req: any,
   ) {
     payload.createdBy = req.user.name;
+    payload.createdById = req.user.userId;
     return this.invoicesService.generateMustaqlasa(contractId, payload);
   }
 

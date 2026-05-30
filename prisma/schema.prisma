@@ -25,8 +25,16 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  projectsManaged Project[]  @relation("ProjectManager")
-  auditLogs       AuditLog[]
+  projectsManaged         Project[]           @relation("ProjectManager")
+  quotationsCreated       Quotation[]         @relation("QuotationCreator")
+  contractsCreated        Contract[]          @relation("ContractCreator")
+  changeOrdersCreated     ChangeOrder[]       @relation("ChangeOrderCreator")
+  invoicesCreated         Invoice[]           @relation("InvoiceCreator")
+  purchaseOrdersCreated   PurchaseOrder[]     @relation("PurchaseOrderCreator")
+  dailyReportsCreated     DailyReport[]       @relation("DailyReportCreator")
+  expensesRequested       Expense[]           @relation("ExpenseRequester")
+  materialTransactionsCreated MaterialTransaction[] @relation("MaterialTransactionCreator")
+  auditLogs               AuditLog[]
 }
 
 model Role {
@@ -212,6 +220,8 @@ model Contract {
   changeOrders ChangeOrder[] // ملاحق العقود والأوامر التغييرية
 
   createdBy   String?
+  createdById String?
+  createdByUser User?  @relation("ContractCreator", fields: [createdById], references: [id])
   approvedBy  String?
   approvedAt  DateTime?
 
@@ -235,6 +245,8 @@ model ChangeOrder {
   amount          Float    // Total value of the addendum
   
   createdBy       String?
+  createdById     String?
+  createdByUser   User?    @relation("ChangeOrderCreator", fields: [createdById], references: [id])
   approvedBy      String?
   
   items           ChangeOrderItem[]
@@ -317,6 +329,8 @@ model Invoice {
   paidAmount      Float @default(0)
 
   createdBy       String?
+  createdById     String?
+  createdByUser   User?    @relation("InvoiceCreator", fields: [createdById], references: [id])
   approvedBy      String?
   approvedAt      DateTime?
 
@@ -410,6 +424,8 @@ model PurchaseOrder {
   daftraId      String?  // Sync ID from Daftra
 
   createdBy     String?
+  createdById   String?
+  createdByUser User?    @relation("PurchaseOrderCreator", fields: [createdById], references: [id])
   approvedBy    String?
   approvedAt    DateTime?
 
@@ -458,6 +474,8 @@ model Quotation {
   netAmount       Float    @default(0)
   
   createdBy       String?
+  createdById     String?
+  createdByUser   User?    @relation("QuotationCreator", fields: [createdById], references: [id])
   approvedBy      String?
   approvedAt      DateTime?
 
@@ -514,7 +532,9 @@ model Expense {
   date        DateTime @default(now())
   status      String   @default("APPROVED") // PENDING, APPROVED, REJECTED
   
-  requestedBy String?  
+  requestedBy   String?  
+  requestedById String?
+  requestedByUser User? @relation("ExpenseRequester", fields: [requestedById], references: [id])
   isPettyCash Boolean  @default(true) 
   
   createdAt   DateTime @default(now())
@@ -596,6 +616,8 @@ model MaterialTransaction {
   
   remarks       String?
   createdBy     String?  // User acting
+  createdById   String?
+  createdByUser User?    @relation("MaterialTransactionCreator", fields: [createdById], references: [id])
   createdAt     DateTime @default(now())
 }
 model QuotationTemplate {
@@ -629,6 +651,8 @@ model DailyReport {
   equipments  DailyEquipment[]
   
   createdBy   String?
+  createdById String?
+  createdByUser User? @relation("DailyReportCreator", fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

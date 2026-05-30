@@ -23,12 +23,13 @@ export class QuotationsController {
   @Permissions('QUOTATION_CREATE')
   create(@Body() createQuotationDto: any, @Req() req: any) {
     createQuotationDto.createdBy = req.user.name;
+    createQuotationDto.createdById = req.user.userId;
     return this.quotationsService.create(createQuotationDto);
   }
 
   @Get()
-  findAll() {
-    return this.quotationsService.findAll();
+  findAll(@Req() req: any) {
+    return this.quotationsService.findAll(req.user);
   }
 
   @Get(':id')

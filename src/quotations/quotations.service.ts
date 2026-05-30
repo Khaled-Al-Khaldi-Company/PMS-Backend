@@ -57,6 +57,7 @@ export class QuotationsService {
           })),
         },
         createdBy: data.createdBy,
+        createdById: data.createdById,
       },
       include: {
         client: true,
@@ -65,8 +66,17 @@ export class QuotationsService {
     });
   }
 
-  findAll() {
+  findAll(user?: any) {
+    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    const where: any = {};
+    if (!canViewAll && user?.userId) {
+      where.OR = [
+        { createdById: user.userId },
+        { project: { managerId: user.userId } },
+      ];
+    }
     return this.prisma.quotation.findMany({
+      where,
       include: { client: true, project: true },
       orderBy: { createdAt: 'desc' },
     });

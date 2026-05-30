@@ -21,8 +21,15 @@ export class ContractsService {
     return this.prisma.contract.create({ data });
   }
 
-  async findAll(type?: string, projectId?: string): Promise<Contract[]> {
+  async findAll(type?: string, projectId?: string, user?: any): Promise<Contract[]> {
     const where: any = {};
+    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    if (!canViewAll && user?.userId) {
+      where.OR = [
+        { createdById: user.userId },
+        { project: { managerId: user.userId } },
+      ];
+    }
     if (type && ['MAIN_CONTRACT', 'SUBCONTRACT'].includes(type)) {
       where.type = type;
     }
@@ -211,6 +218,7 @@ export class ContractsService {
           amount,
           status: status || 'APPROVED',
           createdBy: data.createdBy,
+          createdById: data.createdById,
           approvedBy: status === 'APPROVED' ? data.createdBy : undefined,
           contract: { connect: { id: contractId } },
           items: {

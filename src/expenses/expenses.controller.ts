@@ -6,6 +6,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -19,13 +20,15 @@ export class ExpensesController {
 
   @Post()
   @Permissions('EXPENSE_CREATE')
-  create(@Body() createData: any) {
+  create(@Body() createData: any, @Req() req: any) {
+    createData.requestedBy = req.user.name;
+    createData.requestedById = req.user.userId;
     return this.expensesService.create(createData);
   }
 
   @Get()
-  findAll() {
-    return this.expensesService.findAll();
+  findAll(@Req() req: any) {
+    return this.expensesService.findAll(req.user);
   }
 
   @Delete(':id')

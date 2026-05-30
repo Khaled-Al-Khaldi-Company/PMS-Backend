@@ -35,13 +35,13 @@ export class ProjectsController {
   }
 
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  findAll(@Request() req: any) {
+    return this.projectsService.findAll(req.user);
   }
 
   @Get('dashboard/global')
-  getGlobalDashboard() {
-    return this.projectsService.getGlobalDashboard();
+  getGlobalDashboard(@Request() req: any) {
+    return this.projectsService.getGlobalDashboard(req.user);
   }
 
   @Get(':id')

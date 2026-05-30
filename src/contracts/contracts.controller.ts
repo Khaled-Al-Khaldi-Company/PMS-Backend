@@ -26,6 +26,7 @@ export class ContractsController {
     const { projectId, subcontractorId, subcontractorName, items, ...rest } =
       createContractDto;
     rest.createdBy = req.user.name;
+    rest.createdById = req.user.userId;
 
     // Auto-create subcontractor if name is provided
     const subcontractorConn = subcontractorId
@@ -53,8 +54,8 @@ export class ContractsController {
   }
 
   @Get()
-  findAll(@Query('type') type?: string, @Query('projectId') projectId?: string) {
-    return this.contractsService.findAll(type, projectId);
+  findAll(@Req() req: any, @Query('type') type?: string, @Query('projectId') projectId?: string) {
+    return this.contractsService.findAll(type, projectId, req.user);
   }
 
   @Get('project/:projectId')
@@ -92,6 +93,7 @@ export class ContractsController {
     @Req() req: any,
   ) {
     changeOrderDto.createdBy = req.user.name;
+    changeOrderDto.createdById = req.user.userId;
     return this.contractsService.createChangeOrder(contractId, changeOrderDto);
   }
 }

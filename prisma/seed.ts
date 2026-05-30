@@ -42,6 +42,7 @@ async function main() {
     // النظام والمستخدمين
     { name: 'MANAGE_USERS', description: 'إدارة أدوار ومستخدمي النظام (Admin)' },
     { name: 'FINANCE_VIEW', description: 'الاطلاع على لوحة القيادة والموازنات (Dashboard)' },
+    { name: 'VIEW_ALL_RECORDS', description: 'مشاهدة所有 السجلات لجميع المستخدمين (صلاحية عامة)' },
   ];
 
   for (const p of permissionsList) {

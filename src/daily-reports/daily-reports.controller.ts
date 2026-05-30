@@ -6,6 +6,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { DailyReportsService } from './daily-reports.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -19,7 +20,9 @@ export class DailyReportsController {
 
   @Post('project/:projectId')
   @RequirePermissions('PROJECT_EDIT')
-  create(@Param('projectId') projectId: string, @Body() data: any) {
+  create(@Param('projectId') projectId: string, @Body() data: any, @Req() req: any) {
+    data.createdBy = req.user.name;
+    data.createdById = req.user.userId;
     return this.dailyReportsService.create(projectId, data);
   }
 
