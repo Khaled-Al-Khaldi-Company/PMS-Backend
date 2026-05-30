@@ -218,7 +218,7 @@ export class ContractsService {
           amount,
           status: status || 'APPROVED',
           createdBy: data.createdBy,
-          createdById: data.createdById,
+          createdByUser: data.createdById ? { connect: { id: data.createdById } } : undefined,
           approvedBy: status === 'APPROVED' ? data.createdBy : undefined,
           contract: { connect: { id: contractId } },
           items: {

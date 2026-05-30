@@ -81,7 +81,7 @@ export class PurchasesService {
               0,
             ),
         createdBy: data.createdBy,
-        createdById: data.createdById,
+        createdByUser: data.createdById ? { connect: { id: data.createdById } } : undefined,
       },
       include: {
         items: { include: { material: true } },

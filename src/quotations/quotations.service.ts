@@ -57,7 +57,7 @@ export class QuotationsService {
           })),
         },
         createdBy: data.createdBy,
-        createdById: data.createdById,
+        createdByUser: data.createdById ? { connect: { id: data.createdById } } : undefined,
       },
       include: {
         client: true,

@@ -179,7 +179,7 @@ export class InvoicesService {
               netAmount,
               status: 'DRAFT',
               createdBy: payload.createdBy,
-              createdById: payload.createdById,
+              createdByUser: payload.createdById ? { connect: { id: payload.createdById } } : undefined,
               details: {
                 create: detailsToCreate,
               },
