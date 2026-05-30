@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Req,
+  Logger,
 } from '@nestjs/common';
 import { QuotationsService } from './quotations.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -17,14 +18,20 @@ import { Permissions } from '../auth/permissions.decorator';
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @Controller('v1/quotations')
 export class QuotationsController {
+  private readonly logger = new Logger(QuotationsController.name);
   constructor(private readonly quotationsService: QuotationsService) {}
 
   @Post()
   @Permissions('QUOTATION_CREATE')
-  create(@Body() createQuotationDto: any, @Req() req: any) {
-    createQuotationDto.createdBy = req.user.name;
-    createQuotationDto.createdById = req.user.userId;
-    return this.quotationsService.create(createQuotationDto);
+  async create(@Body() createQuotationDto: any, @Req() req: any) {
+    try {
+      createQuotationDto.createdBy = req.user?.name;
+      createQuotationDto.createdById = req.user?.userId;
+      return await this.quotationsService.create(createQuotationDto);
+    } catch (err: any) {
+      this.logger.error(`Create quotation failed: ${err.message}`, err.stack);
+      throw err;
+    }
   }
 
   @Get()
