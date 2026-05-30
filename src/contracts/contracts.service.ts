@@ -17,8 +17,14 @@ const CONTRACT_META_FIELDS = [
 export class ContractsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: Prisma.ContractCreateInput): Promise<Contract> {
-    return this.prisma.contract.create({ data });
+  async create(data: any): Promise<Contract> {
+    const { createdById, ...rest } = data;
+    return this.prisma.contract.create({
+      data: {
+        ...rest,
+        createdByUser: createdById ? { connect: { id: createdById } } : undefined,
+      },
+    });
   }
 
   async findAll(type?: string, projectId?: string, user?: any): Promise<Contract[]> {
