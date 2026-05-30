@@ -341,11 +341,13 @@ model Invoice {
 }
 
 model InvoiceDetail {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  boqItemId String
-  boqItem     BOQItem @relation(fields: [boqItemId], references: [id])
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  boqItemId String?
+  boqItem     BOQItem? @relation(fields: [boqItemId], references: [id])
+
+  description String? // For change order / non-BOQ items
 
   previousQty Float @default(0)
   currentQty  Float @default(0) // New execution this period

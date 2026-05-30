@@ -12,15 +12,14 @@ export class InvoicesService {
 
   /**
    * Generates a monthly Mustaqlasa (progress invoice)
-   * The actual executed quantities must be passed as an array: { boqItemId, currentQty }
    */
   async generateMustaqlasa(contractId: string, payload: any) {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
-          // payload structure: { executionData: [{boqItemId, currentQty}], taxPercent, advanceDeduction, delayPenalty, otherDeductions }
           const {
             executionData,
+            changeOrderExecutions = [],
             taxPercent = 0,
             advanceDeduction = 0,
             delayPenalty = 0,
@@ -35,25 +34,50 @@ export class InvoicesService {
           });
           if (!contract) throw new BadRequestException('Contract not found');
 
-          // 1. Pre-fetch BOQ Items in a single query
+          // Fetch approved change orders with items
+          const changeOrders = await tx.changeOrder.findMany({
+            where: { contractId, status: 'APPROVED' },
+            include: { items: true },
+          });
+          const allCoItems = changeOrders.flatMap(co => co.items);
+
+          // Map boqItemId -> total additional qty from change orders
+          const coBoqAdjustments: Record<string, number> = {};
+          const coItemsWithoutBoq = allCoItems.filter(i => !i.boqItemId);
+          for (const coItem of allCoItems) {
+            if (coItem.boqItemId) {
+              coBoqAdjustments[coItem.boqItemId] =
+                (coBoqAdjustments[coItem.boqItemId] || 0) + coItem.quantityChange;
+            }
+          }
+
+          // 1. Pre-fetch BOQ Items
           const boqItemIds = executionData.map((item: any) => item.boqItemId);
           const boqItems = await tx.bOQItem.findMany({
             where: { id: { in: boqItemIds } },
           });
 
-          // 2. Pre-fetch previous invoice details in a single query
+          // 2. Pre-fetch previous invoice details for BOQ items
           const previousDetails = await tx.invoiceDetail.findMany({
             where: {
-              invoice: {
-                contractId: contractId,
-              },
+              invoice: { contractId },
               boqItemId: { in: boqItemIds },
+            },
+          });
+
+          // 3. Pre-fetch previous invoice details for CO items (no boqId)
+          const coPreviousDetails = await tx.invoiceDetail.findMany({
+            where: {
+              invoice: { contractId },
+              boqItemId: null,
+              description: { not: null },
             },
           });
 
           let grossAmount = 0;
           const detailsToCreate = [];
 
+          // --- Process regular BOQ item executions ---
           for (const item of executionData) {
             const boqItem = boqItems.find((b) => b.id === item.boqItemId);
             if (!boqItem)
@@ -64,7 +88,9 @@ export class InvoicesService {
             let invoiceUnitPrice = boqItem.unitPrice;
             let invoiceMaxQuantity = boqItem.quantity;
 
-            // If it's a subcontract, use the exact assigned prices and quantities!
+            // Add change order quantity adjustment
+            invoiceMaxQuantity += coBoqAdjustments[boqItem.id] || 0;
+
             if (
               contract.type === 'SUBCONTRACT' &&
               contract.items &&
@@ -78,10 +104,9 @@ export class InvoicesService {
                   `BOQ Item ${item.boqItemId} is not assigned to this contract`,
                 );
               invoiceUnitPrice = cItem.unitPrice;
-              invoiceMaxQuantity = cItem.assignedQty; // Subcontractor cannot exceed their assigned qty
+              invoiceMaxQuantity = cItem.assignedQty + (coBoqAdjustments[boqItem.id] || 0);
             }
 
-            // Filter previous details in memory
             const itemPrevDetails = previousDetails.filter(
               (d) => d.boqItemId === boqItem.id,
             );
@@ -132,6 +157,37 @@ export class InvoicesService {
               await tx.bOQItem.update({
                 where: { id: boqItem.id },
                 data: { executedQty: totalQty },
+              });
+            }
+          }
+
+          // --- Process change order items without boqItemId ---
+          if (changeOrderExecutions.length > 0) {
+            const coExecIds = changeOrderExecutions.map((e: any) => e.changeOrderItemId);
+            for (const exec of changeOrderExecutions) {
+              const coItem = allCoItems.find(i => i.id === exec.changeOrderItemId);
+              if (!coItem) continue;
+              if (coItem.boqItemId) continue;
+
+              const qty = Number(exec.currentQty) || 0;
+              if (qty <= 0) continue;
+
+              const previousQty = coPreviousDetails
+                .filter(d => d.description === coItem.description)
+                .reduce((s, d) => s + d.currentQty, 0);
+              const totalQty = previousQty + qty;
+              const currentValue = qty * coItem.unitPrice;
+              grossAmount += currentValue;
+
+              detailsToCreate.push({
+                description: coItem.description,
+                previousQty,
+                currentQty: qty,
+                totalQty,
+                unitPrice: coItem.unitPrice,
+                currentValue,
+                entryMode: 'QTY',
+                currentProgressPercent: null,
               });
             }
           }
@@ -287,7 +343,7 @@ export class InvoicesService {
         // Revert BOQ Items Execution Qty (only for MAIN_CONTRACT)
         if (invoice.contract.type === 'MAIN_CONTRACT') {
           for (const detail of invoice.details) {
-            if (detail.currentQty && detail.currentQty > 0) {
+            if (detail.currentQty && detail.currentQty > 0 && detail.boqItemId) {
               await tx.bOQItem.update({
                 where: { id: detail.boqItemId },
                 data: { executedQty: { decrement: detail.currentQty } },
@@ -335,10 +391,12 @@ export class InvoicesService {
         // 1. Revert existing execution quantities in BOQ items (only for MAIN_CONTRACT)
         if (contract.type === 'MAIN_CONTRACT') {
           for (const detail of existingInvoice.details) {
-            await tx.bOQItem.update({
-              where: { id: detail.boqItemId },
-              data: { executedQty: { decrement: detail.currentQty } }, // revert only the 'currentQty' from this draft
-            });
+            if (detail.boqItemId) {
+              await tx.bOQItem.update({
+                where: { id: detail.boqItemId },
+                data: { executedQty: { decrement: detail.currentQty } },
+              });
+            }
           }
         }
 
