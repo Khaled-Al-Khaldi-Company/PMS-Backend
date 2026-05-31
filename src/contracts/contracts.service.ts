@@ -265,4 +265,27 @@ export class ContractsService {
       return co;
     });
   }
+
+  async deleteChangeOrder(contractId: string, changeOrderId: string) {
+    const co = await this.prisma.changeOrder.findUnique({
+      where: { id: changeOrderId },
+    });
+    if (!co) throw new NotFoundException('الملحق غير موجود');
+    if (co.contractId !== contractId)
+      throw new BadRequestException('الملحق لا ينتمي لهذا العقد');
+
+    const valueChange =
+      co.type === 'ADDITION' ? -Number(co.amount) : Number(co.amount);
+
+    return this.prisma.$transaction(async (tx) => {
+      if (co.status === 'APPROVED') {
+        await tx.contract.update({
+          where: { id: contractId },
+          data: { totalValue: { increment: valueChange } },
+        });
+      }
+      await tx.changeOrder.delete({ where: { id: changeOrderId } });
+      return { deleted: true };
+    });
+  }
 }

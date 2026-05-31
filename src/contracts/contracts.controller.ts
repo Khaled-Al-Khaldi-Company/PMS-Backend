@@ -96,4 +96,13 @@ export class ContractsController {
     changeOrderDto.createdById = req.user.userId;
     return this.contractsService.createChangeOrder(contractId, changeOrderDto);
   }
+
+  @Delete(':contractId/change-orders/:changeOrderId')
+  @Permissions('CONTRACT_CREATE')
+  deleteChangeOrder(
+    @Param('contractId') contractId: string,
+    @Param('changeOrderId') changeOrderId: string,
+  ) {
+    return this.contractsService.deleteChangeOrder(contractId, changeOrderId);
+  }
 }
