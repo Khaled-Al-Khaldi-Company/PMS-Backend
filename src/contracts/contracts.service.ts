@@ -266,6 +266,81 @@ export class ContractsService {
     });
   }
 
+  async updateChangeOrder(
+    contractId: string,
+    changeOrderId: string,
+    data: any,
+  ) {
+    const existing = await this.prisma.changeOrder.findUnique({
+      where: { id: changeOrderId },
+      include: { items: true },
+    });
+    if (!existing) throw new NotFoundException('الملحق غير موجود');
+    if (existing.contractId !== contractId)
+      throw new BadRequestException('الملحق لا ينتمي لهذا العقد');
+
+    const { title, type, amount, status, items } = data;
+
+    // Reverse old value from contract if it was approved
+    return this.prisma.$transaction(async (tx) => {
+      if (existing.status === 'APPROVED') {
+        const reverseValue =
+          existing.type === 'ADDITION'
+            ? -Number(existing.amount)
+            : Number(existing.amount);
+        await tx.contract.update({
+          where: { id: contractId },
+          data: { totalValue: { increment: reverseValue } },
+        });
+      }
+
+      const newStatus = status || existing.status;
+
+      // Apply new value if approved
+      if (newStatus === 'APPROVED') {
+        const newValue =
+          (type || existing.type) === 'ADDITION'
+            ? Number(amount || existing.amount)
+            : -Number(amount || existing.amount);
+        await tx.contract.update({
+          where: { id: contractId },
+          data: { totalValue: { increment: newValue } },
+        });
+      }
+
+      // Delete old items and recreate
+      await tx.changeOrderItem.deleteMany({
+        where: { changeOrderId },
+      });
+
+      return tx.changeOrder.update({
+        where: { id: changeOrderId },
+        data: {
+          title: title ?? existing.title,
+          type: type ?? existing.type,
+          amount: amount !== undefined ? Number(amount) : existing.amount,
+          status: newStatus,
+          issueDate: data.issueDate
+            ? new Date(data.issueDate)
+            : existing.issueDate,
+          items: {
+            create:
+              items?.map((i: any) => ({
+                description: i.description,
+                quantityChange: Number(i.quantityChange),
+                unitPrice: Number(i.unitPrice),
+                totalValue: Number(i.quantityChange) * Number(i.unitPrice),
+                ...(i.boqItemId
+                  ? { boqItem: { connect: { id: i.boqItemId } } }
+                  : {}),
+              })) || [],
+          },
+        },
+        include: { items: true },
+      });
+    });
+  }
+
   async deleteChangeOrder(contractId: string, changeOrderId: string) {
     const co = await this.prisma.changeOrder.findUnique({
       where: { id: changeOrderId },

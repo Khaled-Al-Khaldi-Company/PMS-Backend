@@ -97,6 +97,16 @@ export class ContractsController {
     return this.contractsService.createChangeOrder(contractId, changeOrderDto);
   }
 
+  @Patch(':contractId/change-orders/:changeOrderId')
+  @Permissions('CONTRACT_CREATE')
+  updateChangeOrder(
+    @Param('contractId') contractId: string,
+    @Param('changeOrderId') changeOrderId: string,
+    @Body() dto: any,
+  ) {
+    return this.contractsService.updateChangeOrder(contractId, changeOrderId, dto);
+  }
+
   @Delete(':contractId/change-orders/:changeOrderId')
   @Permissions('CONTRACT_CREATE')
   deleteChangeOrder(
