@@ -23,3 +23,5 @@ Thumbs.db
 prisma_err.txt
 prisma_err_utf8.txt
 ts_output.txt
+
+.vercel

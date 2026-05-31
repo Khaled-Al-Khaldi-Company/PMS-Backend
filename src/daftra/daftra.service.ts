@@ -328,7 +328,7 @@ export class DaftraService {
 
     if (isMainContract) {
       // ────────────────────────────────────────────────────────
-      // SALES INVOICE (MAIN_CONTRACT)
+      // SALES ORDER (MAIN_CONTRACT) - أمر بيع
       // ────────────────────────────────────────────────────────
       const client = invoice.contract.project?.client;
       if (!client?.daftraClientId) {
@@ -338,15 +338,15 @@ export class DaftraService {
       }
 
       daftraPayload = {
-        Invoice: {
+        Order: {
           staff_id: 1,
           client_id: Number(client.daftraClientId),
           date: new Date().toISOString().split('T')[0],
-          draft: 1, // 1 = Daftra flag to save as completely DRAFT (Prevents ZATCA reporting)
+          draft: 1,
           status: 4,
           notes: `مستخلص مبيعات رقم: ${invoice.invoiceNumber} | مشروع: ${invoice.contract.project?.name}${invoice.deferDeductions ? ' | الاستقطاعات مؤجلة للمستخلص القادم' : ''}`,
         },
-        InvoiceItem: items,
+        OrderItem: items,
       };
 
       if (invoice.contract.project?.daftraCostCenterId) {
@@ -358,7 +358,7 @@ export class DaftraService {
         ];
       }
 
-      apiUrl = `https://${domain}.daftra.com/api2/invoices`;
+      apiUrl = `https://${domain}.daftra.com/api2/orders`;
     } else {
       // ────────────────────────────────────────────────────────
       // PURCHASE ORDER (SUBCONTRACT) - يستخدم purchase_orders endpoint
@@ -441,6 +441,7 @@ export class DaftraService {
 
       const invoiceDaftraId =
         responseData.id ||
+        responseData.Order?.id ||
         responseData.Invoice?.id ||
         responseData.PurchaseOrder?.id ||
         responseData.PurchaseInvoice?.id ||
@@ -696,8 +697,8 @@ export class DaftraService {
     const { apiKey, domain } = await this.getDaftraConfig();
     const isMainContract = invoice.contract.type === 'MAIN_CONTRACT';
 
-    // Main contracts use invoices, subcontracts use purchase_invoices
-    const endpoint = isMainContract ? 'invoices' : 'purchase_invoices';
+    // Main contracts use orders, subcontracts use purchase_invoices
+    const endpoint = isMainContract ? 'orders' : 'purchase_invoices';
 
     try {
       const response = await fetch(
@@ -729,7 +730,7 @@ export class DaftraService {
       }
 
       const resData = await response.json();
-      const nodeName = isMainContract ? 'Invoice' : 'PurchaseInvoice';
+      const nodeName = isMainContract ? 'Order' : 'PurchaseInvoice';
       const daftraDoc =
         resData.data?.[nodeName] ||
         resData[nodeName] ||
