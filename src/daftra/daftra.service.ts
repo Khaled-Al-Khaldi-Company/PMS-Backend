@@ -32,11 +32,40 @@ export class DaftraService {
   async getDaftraCostCenters() {
     const { baseUrl, apiKey } = await this.getDaftraConfig();
     try {
-      const resp = await fetch(`${baseUrl}/entity/cost_center/list?limit=500`, {
-        headers: { APIKEY: apiKey, Accept: 'application/json' },
-      });
-      const data = await resp.json().catch(() => ({}));
-      return data?.data || [];
+      const allItems: any[] = [];
+      let page = 1;
+      let hasMore = true;
+      const seenIds = new Set();
+
+      while (hasMore && page <= 50) {
+        const resp = await fetch(
+          `${baseUrl}/entity/cost_center/list?page=${page}&limit=500`,
+          {
+            headers: { APIKEY: apiKey, Accept: 'application/json' },
+          },
+        );
+        const data = await resp.json().catch(() => ({}));
+        const items = data?.data || [];
+
+        if (items.length > 0) {
+          let addedNew = false;
+          for (const item of items) {
+            if (!seenIds.has(item.id)) {
+              seenIds.add(item.id);
+              allItems.push(item);
+              addedNew = true;
+            }
+          }
+          if (!addedNew) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+      return allItems;
     } catch {
       return [];
     }
