@@ -361,7 +361,7 @@ export class DaftraService {
       apiUrl = `https://${domain}.daftra.com/api2/invoices`;
     } else {
       // ────────────────────────────────────────────────────────
-      // PURCHASE INVOICE (SUBCONTRACT)
+      // PURCHASE ORDER (SUBCONTRACT) - يستخدم purchase_orders endpoint
       // ────────────────────────────────────────────────────────
       const supplier = invoice.contract.subcontractor;
       if (!supplier?.daftraSupplierId) {
@@ -370,14 +370,29 @@ export class DaftraService {
         );
       }
 
+      const supplierEmail =
+        (supplier as any).email &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((supplier as any).email)
+          ? (supplier as any).email
+          : `vendor${supplier.daftraSupplierId}@example.com`;
+
+      console.log(
+        `[Daftra] Subcontract invoice push - supplier: ${supplier.name}, email: ${supplierEmail}, daftraId: ${supplier.daftraSupplierId}`,
+      );
+
       daftraPayload = {
         PurchaseOrder: {
           staff_id: 1,
           supplier_id: Number(supplier.daftraSupplierId),
+          supplier_email: supplierEmail,
           date: new Date().toISOString().split('T')[0],
           draft: 1,
           status: 4,
           notes: `مستخلص مورد/مقاول باطن رقم: ${invoice.invoiceNumber} | مشروع: ${invoice.contract.project?.name}${invoice.deferDeductions ? ' | الاستقطاعات مؤجلة للمستخلص القادم' : ''}`,
+        },
+        Supplier: {
+          id: Number(supplier.daftraSupplierId),
+          email: supplierEmail,
         },
         PurchaseOrderItem: items,
       };
@@ -391,7 +406,9 @@ export class DaftraService {
         ];
       }
 
-      apiUrl = `https://${domain}.daftra.com/api2/purchase_invoices`;
+      // استخدام purchase_orders بدلاً من purchase_invoices
+      // لأن purchase_invoices يتطلب بنية PurchaseInvoice مختلفة
+      apiUrl = `https://${domain}.daftra.com/api2/purchase_orders`;
     }
 
     try {
@@ -420,6 +437,7 @@ export class DaftraService {
       const invoiceDaftraId =
         responseData.id ||
         responseData.Invoice?.id ||
+        responseData.PurchaseOrder?.id ||
         responseData.PurchaseInvoice?.id ||
         responseData.data?.id ||
         responseData.result?.id ||
