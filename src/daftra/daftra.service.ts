@@ -558,6 +558,10 @@ export class DaftraService {
       });
       if (companyProfile?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyProfile.email)) {
         supplierEmail = companyProfile.email;
+      } else {
+        throw new BadRequestException(
+          `لا يمكن ترحيل أمر الشراء. البريد الإلكتروني للمورد "${po.supplier.name}" غير مسجل في النظام. يرجى إضافة البريد الإلكتروني للمورد من صفحة جهات الاتصال، أو التأكد من وجود بريد إلكتروني في ملف الشركة.`,
+        );
       }
     }
 
