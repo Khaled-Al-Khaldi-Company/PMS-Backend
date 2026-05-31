@@ -328,7 +328,7 @@ export class DaftraService {
 
     if (isMainContract) {
       // ────────────────────────────────────────────────────────
-      // SALES ORDER (MAIN_CONTRACT) - أمر بيع
+      // ESTIMATE (MAIN_CONTRACT) - عرض سعر / أمر بيع
       // ────────────────────────────────────────────────────────
       const client = invoice.contract.project?.client;
       if (!client?.daftraClientId) {
@@ -338,7 +338,7 @@ export class DaftraService {
       }
 
       daftraPayload = {
-        Order: {
+        Estimate: {
           staff_id: 1,
           client_id: Number(client.daftraClientId),
           date: new Date().toISOString().split('T')[0],
@@ -346,7 +346,7 @@ export class DaftraService {
           status: 4,
           notes: `مستخلص مبيعات رقم: ${invoice.invoiceNumber} | مشروع: ${invoice.contract.project?.name}${invoice.deferDeductions ? ' | الاستقطاعات مؤجلة للمستخلص القادم' : ''}`,
         },
-        OrderItem: items,
+        InvoiceItem: items,
       };
 
       if (invoice.contract.project?.daftraCostCenterId) {
@@ -358,7 +358,7 @@ export class DaftraService {
         ];
       }
 
-      apiUrl = `https://${domain}.daftra.com/api2/orders`;
+      apiUrl = `https://${domain}.daftra.com/api2/estimates`;
     } else {
       // ────────────────────────────────────────────────────────
       // PURCHASE ORDER (SUBCONTRACT) - يستخدم purchase_orders endpoint
@@ -441,7 +441,7 @@ export class DaftraService {
 
       const invoiceDaftraId =
         responseData.id ||
-        responseData.Order?.id ||
+        responseData.Estimate?.id ||
         responseData.Invoice?.id ||
         responseData.PurchaseOrder?.id ||
         responseData.PurchaseInvoice?.id ||
@@ -730,7 +730,7 @@ export class DaftraService {
       }
 
       const resData = await response.json();
-      const nodeName = isMainContract ? 'Order' : 'PurchaseInvoice';
+      const nodeName = isMainContract ? 'Estimate' : 'PurchaseInvoice';
       const daftraDoc =
         resData.data?.[nodeName] ||
         resData[nodeName] ||
