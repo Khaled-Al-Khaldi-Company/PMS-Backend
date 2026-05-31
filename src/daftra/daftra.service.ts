@@ -370,15 +370,20 @@ export class DaftraService {
         );
       }
 
-      const supplierEmail =
-        (supplier as any).email &&
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((supplier as any).email)
-          ? (supplier as any).email
-          : `vendor${supplier.daftraSupplierId}@example.com`;
+      const companyProfile = await this.prisma.companyProfile.findUnique({
+        where: { id: '1' },
+      });
 
-      console.log(
-        `[Daftra] Subcontract invoice push - supplier: ${supplier.name}, email: ${supplierEmail}, daftraId: ${supplier.daftraSupplierId}`,
-      );
+      let supplierEmail = '';
+      if (supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supplier.email)) {
+        supplierEmail = supplier.email;
+      } else if (companyProfile?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyProfile.email)) {
+        supplierEmail = companyProfile.email;
+      } else {
+        throw new BadRequestException(
+          `لا يمكن ترحيل المستخلص للمقاول "${supplier.name}". البريد الإلكتروني للمقاول غير مسجل في النظام. يرجى إضافة البريد الإلكتروني للمقاول من صفحة جهات الاتصال، أو التأكد من وجود بريد إلكتروني في ملف الشركة.`,
+        );
+      }
 
       daftraPayload = {
         PurchaseOrder: {
@@ -514,19 +519,28 @@ export class DaftraService {
       notes: `PO from PMS | Project: ${po.project?.name || 'N/A'} | Supplier: ${po.supplier?.name || 'N/A'}`,
     };
 
+    let supplierEmail = '';
+    if (po.supplier.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)) {
+      supplierEmail = po.supplier.email;
+    } else {
+      const companyProfile = await this.prisma.companyProfile.findUnique({
+        where: { id: '1' },
+      });
+      if (companyProfile?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyProfile.email)) {
+        supplierEmail = companyProfile.email;
+      }
+    }
+
     const daftraPayload: any = {
       PurchaseOrder: {
         ...payloadPurchaseOrder,
+        supplier_email: supplierEmail,
         draft: 1,
         status: 4,
       },
       Supplier: {
         id: Number(po.supplier.daftraSupplierId),
-        email:
-          po.supplier.email &&
-          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(po.supplier.email)
-            ? po.supplier.email
-            : `vendor${po.supplier.daftraSupplierId}@example.com`,
+        email: supplierEmail,
       },
       PurchaseOrderItem: po.items.map((item, index) => ({
         item: item.material.name || `مادة ${index + 1}`, // 'item' is required by Daftra V1 API
