@@ -97,4 +97,32 @@ export class UsersService {
       include: { role: true },
     });
   }
+
+  // === Project-Level Permissions ===
+
+  async getUserProjectPermissions(userId: string) {
+    return this.prisma.userProjectPermission.findMany({
+      where: { userId },
+      include: { project: { select: { id: true, name: true, code: true } } },
+    });
+  }
+
+  async setUserProjectPermissions(
+    userId: string,
+    projectId: string,
+    permissions: string[],
+  ) {
+    return this.prisma.userProjectPermission.upsert({
+      where: { userId_projectId: { userId, projectId } },
+      update: { permissions },
+      create: { userId, projectId, permissions },
+      include: { project: { select: { id: true, name: true, code: true } } },
+    });
+  }
+
+  async removeUserProjectPermissions(userId: string, projectId: string) {
+    return this.prisma.userProjectPermission.delete({
+      where: { userId_projectId: { userId, projectId } },
+    });
+  }
 }

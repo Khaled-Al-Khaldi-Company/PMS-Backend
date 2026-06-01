@@ -26,6 +26,7 @@ model User {
 
   // Relations
   projectsManaged         Project[]           @relation("ProjectManager")
+  projectPermissions      UserProjectPermission[]
   quotationsCreated       Quotation[]         @relation("QuotationCreator")
   contractsCreated        Contract[]          @relation("ContractCreator")
   changeOrdersCreated     ChangeOrder[]       @relation("ChangeOrderCreator")
@@ -52,6 +53,19 @@ model Permission {
   name        String  @unique // e.g., "CREATE_PROJECT", "APPROVE_INVOICE"
   description String?
   roles       Role[]  @relation("RolePermissions") // Many-to-Many
+}
+
+model UserProjectPermission {
+  id          String   @id @default(uuid())
+  userId      String
+  projectId   String
+  permissions Json     // string[] e.g. ["INVOICE_CREATE", "INVOICE_APPROVE"]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, projectId])
 }
 
 model AuditLog {
@@ -125,6 +139,7 @@ model Project {
   quotation      Quotation?
   expenses       Expense[]
   dailyReports   DailyReport[]
+  userPermissions UserProjectPermission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

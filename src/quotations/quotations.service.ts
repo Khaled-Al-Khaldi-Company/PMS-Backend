@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { getViewableProjects } from '../common/permissions-helper';
 
 @Injectable()
 export class QuotationsService {
@@ -67,13 +68,17 @@ export class QuotationsService {
   }
 
   findAll(user?: any) {
-    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    const viewableProjects = getViewableProjects(user);
     const where: any = {};
-    if (!canViewAll && user?.userId) {
-      where.OR = [
+    if (viewableProjects !== null && user?.userId) {
+      const filters: any[] = [
         { createdById: user.userId },
         { project: { managerId: user.userId } },
       ];
+      if (viewableProjects.length > 0) {
+        filters.push({ project: { id: { in: viewableProjects } } });
+      }
+      where.OR = filters;
     }
     return this.prisma.quotation.findMany({
       where,

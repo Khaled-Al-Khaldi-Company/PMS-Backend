@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Contract } from '@prisma/client';
+import { getViewableProjects } from '../common/permissions-helper';
 
 const CONTRACT_META_FIELDS = [
   'referenceNumber',
@@ -29,12 +30,16 @@ export class ContractsService {
 
   async findAll(type?: string, projectId?: string, user?: any): Promise<Contract[]> {
     const where: any = {};
-    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
-    if (!canViewAll && user?.userId) {
-      where.OR = [
+    const viewableProjects = getViewableProjects(user);
+    if (viewableProjects !== null && user?.userId) {
+      const filters: any[] = [
         { createdById: user.userId },
         { project: { managerId: user.userId } },
       ];
+      if (viewableProjects.length > 0) {
+        filters.push({ projectId: { in: viewableProjects } });
+      }
+      where.OR = filters;
     }
     if (type && ['MAIN_CONTRACT', 'SUBCONTRACT'].includes(type)) {
       where.type = type;

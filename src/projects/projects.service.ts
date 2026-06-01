@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Project } from '@prisma/client';
+import { getViewableProjects } from '../common/permissions-helper';
 
 @Injectable()
 export class ProjectsService {
@@ -15,10 +16,17 @@ export class ProjectsService {
   }
 
   async findAll(user?: any): Promise<Project[]> {
-    const canViewAll = user?.permissions?.includes('VIEW_ALL_RECORDS') || user?.role === 'Admin' || user?.role === 'System Admin';
+    const viewableProjects = getViewableProjects(user);
     const where: any = {};
-    if (!canViewAll && user?.userId) {
-      where.managerId = user.userId;
+    if (viewableProjects !== null) {
+      if (viewableProjects.length > 0) {
+        where.OR = [
+          { id: { in: viewableProjects } },
+          { managerId: user.userId },
+        ];
+      } else if (user?.userId) {
+        where.managerId = user.userId;
+      }
     }
     return this.prisma.project.findMany({
       where,

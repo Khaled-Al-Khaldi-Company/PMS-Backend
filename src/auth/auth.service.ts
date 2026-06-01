@@ -19,8 +19,12 @@ export class AuthService {
     return null;
   }
 
-  login(user: any) {
+  async login(user: any) {
     const payload = { email: user.email, sub: user.id, role: user.role.name };
+
+    const projectPermissions =
+      await this.usersService.getUserProjectPermissions(user.id);
+
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -30,6 +34,10 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role.name,
         permissions: user.role.permissions.map((p: any) => p.name),
+        projectPermissions: projectPermissions.map((pp: any) => ({
+          projectId: pp.projectId,
+          permissions: pp.permissions as string[],
+        })),
       },
     };
   }
