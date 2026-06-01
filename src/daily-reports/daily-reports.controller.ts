@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Delete,
@@ -38,8 +39,14 @@ export class DailyReportsController {
     return this.dailyReportsService.findOne(id);
   }
 
+  @Patch(':id')
+  @RequirePermissions('PROJECT_EDIT')
+  update(@Param('id') id: string, @Body() data: any) {
+    return this.dailyReportsService.update(id, data);
+  }
+
   @Delete(':id')
-  @RequirePermissions('PROJECT_EDIT') // Ideally some force delete permission
+  @RequirePermissions('PROJECT_EDIT')
   remove(@Param('id') id: string) {
     return this.dailyReportsService.delete(id);
   }

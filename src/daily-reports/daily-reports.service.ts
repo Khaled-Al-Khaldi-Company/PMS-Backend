@@ -71,6 +71,44 @@ export class DailyReportsService {
     return report;
   }
 
+  async update(id: string, data: any) {
+    const { reportDate, weather, temperature, workPerformed, safetyNotes, labors, equipments } = data;
+
+    // Delete existing labors and equipments then recreate
+    await this.prisma.dailyLabor.deleteMany({ where: { reportId: id } });
+    await this.prisma.dailyEquipment.deleteMany({ where: { reportId: id } });
+
+    return this.prisma.dailyReport.update({
+      where: { id },
+      data: {
+        reportDate: reportDate ? new Date(reportDate) : undefined,
+        weather,
+        temperature: temperature ? parseFloat(temperature) : null,
+        workPerformed,
+        safetyNotes,
+        labors: {
+          create:
+            labors?.map((l: any) => ({
+              trade: l.trade,
+              count: parseInt(l.count),
+              hours: parseFloat(l.hours),
+              notes: l.notes,
+            })) || [],
+        },
+        equipments: {
+          create:
+            equipments?.map((e: any) => ({
+              equipmentType: e.equipmentType,
+              count: parseInt(e.count),
+              hours: parseFloat(e.hours),
+              notes: e.notes,
+            })) || [],
+        },
+      },
+      include: { labors: true, equipments: true },
+    });
+  }
+
   async delete(id: string) {
     return this.prisma.dailyReport.delete({
       where: { id },
