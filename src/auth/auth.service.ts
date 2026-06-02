@@ -12,7 +12,11 @@ export class AuthService {
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
-    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
+    if (!user) return null;
+    if (!user.isActive) {
+      throw new UnauthorizedException('هذا الحساب موقوف. الرجاء التواصل مع الإدارة.');
+    }
+    if (await bcrypt.compare(pass, user.passwordHash)) {
       const { passwordHash, ...result } = user;
       return result;
     }
