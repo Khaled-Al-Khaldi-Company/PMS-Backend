@@ -22,6 +22,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const projectPermissions =
       await this.usersService.getUserProjectPermissions(user.id);
 
+    const screenPermissions = user.screenPermissions as string[] | undefined;
+
     return {
       userId: user.id,
       email: user.email,
@@ -32,6 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         projectId: pp.projectId,
         permissions: pp.permissions as string[],
       })),
+      screenPermissions: screenPermissions || [],
     };
   }
 }

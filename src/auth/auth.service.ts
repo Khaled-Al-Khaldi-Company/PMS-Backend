@@ -29,6 +29,8 @@ export class AuthService {
     const projectPermissions =
       await this.usersService.getUserProjectPermissions(user.id);
 
+    const screenPermissions = user.screenPermissions as string[] | undefined;
+
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -42,6 +44,7 @@ export class AuthService {
           projectId: pp.projectId,
           permissions: pp.permissions as string[],
         })),
+        screenPermissions: screenPermissions || [],
       },
     };
   }

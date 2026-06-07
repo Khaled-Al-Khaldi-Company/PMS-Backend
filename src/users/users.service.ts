@@ -26,6 +26,13 @@ export class UsersService {
     });
   }
 
+  async findById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: { role: { include: { permissions: true } } },
+    });
+  }
+
   async findAllRoles() {
     return this.prisma.role.findMany({
       include: { permissions: true },
@@ -70,6 +77,7 @@ export class UsersService {
         lastName: data.lastName,
         isActive: data.isActive ?? true,
         role: { connect: { id: data.roleId } },
+        screenPermissions: data.screenPermissions ?? [],
       },
       include: { role: true },
     });
@@ -81,6 +89,7 @@ export class UsersService {
     if (data.lastName !== undefined) updateData.lastName = data.lastName;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.email !== undefined) updateData.email = data.email;
+    if (data.screenPermissions !== undefined) updateData.screenPermissions = data.screenPermissions;
 
     if (data.roleId) {
       updateData.role = { connect: { id: data.roleId } };

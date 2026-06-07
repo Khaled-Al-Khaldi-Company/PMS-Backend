@@ -21,6 +21,7 @@ model User {
   isActive     Boolean  @default(true)
   roleId       String
   role         Role     @relation(fields: [roleId], references: [id])
+  screenPermissions Json @default("[]")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
